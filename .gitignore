@@ -154,4 +154,8 @@ psd
 thumb
 sketch
 
+
+# related to philo
+copierv1.py
+compiled_code.txt
 # End of https://www.toptal.com/developers/gitignore/api/react,node
