@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { LoginForm } from "@/components/login-form"
 import { AuthProvider } from "@/context/AuthContext"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { AdminDashboard, AdvisorDashboard, StudentDashboard } from "@/pages/Dashboards"
+import AdminDashboard from "@/pages/admin/Dashboard"
+import AdvisorDashboard from "@/pages/advisor/Dashboard"
+import StudentDashboard from "@/pages/student/Dashboard"
 import './App.css'
 
 function App() {
@@ -23,17 +25,26 @@ function App() {
           
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin" element={<AdminDashboard />} />
+            {/* Redirect /admin to /admin/dashboard */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Add other admin routes here, e.g., /admin/users */}
           </Route>
 
           {/* Advisor Routes */}
           <Route element={<ProtectedRoute allowedRoles={['advisor']} />}>
-            <Route path="/advisor" element={<AdvisorDashboard />} />
+            {/* Redirect /advisor to /advisor/dashboard */}
+            <Route path="/advisor" element={<Navigate to="/advisor/dashboard" replace />} />
+            <Route path="/advisor/dashboard" element={<AdvisorDashboard />} />
+            {/* Add other advisor routes here, e.g., /advisor/my-students */}
           </Route>
 
           {/* Student Routes */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="/student" element={<StudentDashboard />} />
+             {/* Redirect /student to /student/dashboard */}
+            <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+            <Route path="/student/dashboard" element={<StudentDashboard />} />
+            {/* Add other student routes here, e.g., /student/academics */}
           </Route>
 
           {/* Catch all */}
