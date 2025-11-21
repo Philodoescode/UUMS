@@ -1,81 +1,137 @@
-# Application Setup Guide
+# UUMS
 
-This project consists of two main parts: a **backend** API built with Node.js/Express and SQLite, and a **frontend** built with React, Vite, and TypeScript, styled using Tailwind CSS (with shadcn/ui conventions).
+## Table of Contents
 
-## Prerequisites
+- [About The Project](#about-the-project)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation & Setup](#installation--setup)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
 
-Before running the application, ensure you have the following installed on your system:
+## About The Project
 
-1.  **Node.js:** (Version 18 or later is recommended).
-2.  **pnpm:** This project uses `pnpm` as the package manager. You must install it globally if you haven't already.
+This project serves as a template or a base for a User Management System (UUMS). It includes a frontend built with React, Vite, and TypeScript, and a backend powered by Node.js and Express. The recent update containerizes the MongoDB database using Docker, simplifying the database setup process.
 
-```bash
-npm install -g pnpm
+## Tech Stack
+
+*   **Frontend**: React, Vite, TypeScript, Tailwind CSS
+*   **Backend**: Node.js, Express.js
+*   **Database**: MongoDB with Mongoose
+*   **Containerization**: Docker, Docker Compose
+
+## Getting Started
+
+Follow these steps to get your development environment set up and running.
+
+### Prerequisites
+
+Make sure you have the following software installed on your machine:
+*   **Node.js**: [Download & Install Node.js](https://nodejs.org/)
+*   **pnpm**: After installing Node.js, install pnpm globally.
+    ```sh
+    npm install -g pnpm
+    ```
+*   **Docker & Docker Compose**: [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+### Installation & Setup
+
+1.  **Clone the repository**
+    ```sh
+    git clone https://github.com/Philodoescode/UUMS.git
+    cd your-repository
+    ```
+
+2.  **Start the Dockerized MongoDB Database**
+
+    In the project's root directory (where `docker-compose.yml` is located), run the following command:
+    ```sh
+    docker-compose up -d
+    ```
+    This command will:
+    *   Pull the official MongoDB image if you don't have it.
+    *   Create and start a MongoDB container named `UUMS_mongo_db` in detached mode (`-d`).
+    *   Expose the database on port `27017` of your local machine.
+    *   Create a persistent volume `mongo-data` to store your database data.
+    *   You can verify the container is running with `docker ps`.
+
+3.  **Configure and Run the Backend**
+
+    *   Navigate to the backend directory:
+        ```sh
+        cd backend
+        ```
+    *   Create a `.env` file. You can copy the example below:
+        ```sh
+        cp .env.example .env # If you create an .env.example
+        ```
+        Add the following environment variables to your `backend/.env` file:
+        ```dotenv
+        # backend/.env
+
+        # MongoDB connection string for the Docker container
+        MONGO_URI=mongodb://root:example@localhost:27017/UUMS_db?authSource=admin
+
+        # Port for the Express server
+        PORT=3000
+        ```
+        (See [Environment Variables](#environment-variables) for more details on the `MONGO_URI`.)
+
+    *   Install dependencies:
+        ```sh
+        pnpm install
+        ```
+    *   Start the development server:
+        ```sh
+        pnpm dev
+        ```
+    Your backend server should now be running on `http://localhost:3000` and connected to the MongoDB container. You should see the message "MongoDB Connected via Docker..." in your terminal.
+
+4.  **Configure and Run the Frontend**
+
+    *   Open a new terminal and navigate to the frontend directory:
+        ```sh
+        cd frontend
+        ```
+    *   Install dependencies:
+        ```sh
+        pnpm install
+        ```
+    *   Start the development server:
+        ```sh
+        pnpm dev
+        ```
+    The Vite development server will start, and you can access the frontend by navigating to the provided URL (usually `http://localhost:5173`).
+
+## Project Structure
 ```
-
-## Installation
-
-Follow these steps to install the dependencies for both the backend and frontend services.
-
-### 1. Install Backend Dependencies
-
-Navigate to the `backend` directory and install the necessary Node.js packages.
-
-```bash
-cd backend
-pnpm install
+.
+├── backend/            # Node.js & Express Backend
+│   ├── config/
+│   │   └── db.js       # Database connection logic
+│   ├── node_modules/
+│   ├── .env            # Environment variables (you create this)
+│   ├── package.json
+│   └── server.js       # Main server entry point
+│
+├── frontend/           # React & Vite Frontend
+│   ├── public/
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── docker-compose.yml  # Defines the MongoDB service
+└── README.md           # This file
 ```
+## Environment Variables
 
-### 2. Install Frontend Dependencies
+The backend requires a `.env` file with the following variables:
 
-Navigate to the `frontend` directory and install the required React and development packages.
-
-```bash
-cd ../frontend
-pnpm install
-```
-
-## Database Setup
-
-The backend uses **SQLite**. No manual migration steps are required initially.
-
-*   The database connection is configured in `backend/db.js`.
-*   The SQLite database file (`database.sqlite`) will be automatically created in the `backend/` directory the first time the server runs.
-
-## Running the Application
-
-Both the backend and frontend must be running concurrently. You will need two separate terminal windows for this.
-
-### 1. Start the Backend Server
-
-The backend runs on **Port 5000** and uses `nodemon` for automatic restarts during development.
-
-In your first terminal:
-
-```bash
-cd backend
-pnpm dev
-```
-
-You should see the output: `Server running on port 5000`.
-
-### 2. Start the Frontend Application
-
-The frontend uses Vite and will typically start on port 5173 (or the next available port).
-
-In your second terminal:
-
-```bash
-cd frontend
-pnpm dev
-```
-
-The terminal will provide the local URL, typically:
-
-```
-> Local: http://127.0.0.1:5173/
-```
-
-Open this URL in your browser to view the application.
-
----
+*   `PORT`: The port on which the Express server will run. Defaults to `3000`.
+*   `MONGO_URI`: The connection string for your MongoDB instance. For the provided Docker setup, it breaks down as follows:
+    *   `mongodb://`: The standard connection protocol.
+    *   `root:example`: The root user and password defined in `docker-compose.yml`.
+    *   `@localhost:27017`: The host and port where the database is exposed.
+    *   `/UUMS_db`: The name of the database to connect to. Mongoose will create it if it doesn't exist.
+    *   `?authSource=admin`: Specifies the authentication database where the root user was created. This is crucial for successful authentication.
