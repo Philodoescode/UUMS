@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Role, User } = require('../models');
+const { Role, User, Department } = require('../models');
 
 const seedDatabase = async () => {
   try {
@@ -18,7 +18,29 @@ const seedDatabase = async () => {
       roleDocs[roleName] = role.id;
     }
 
-    // 2. Check & Create Dummy Users
+    // 2. Check & Create Mock Departments
+    const mockDepartments = [
+      { code: 'CS', name: 'Computer Science' },
+      { code: 'EE', name: 'Electrical Engineering' },
+      { code: 'MATH', name: 'Mathematics' },
+      { code: 'HIST', name: 'History' },
+      { code: 'BUS', name: 'Business Administration' },
+    ];
+    const departmentDocs = {};
+
+    for (const deptData of mockDepartments) {
+      const [department, created] = await Department.findOrCreate({
+        where: { code: deptData.code },
+        defaults: deptData,
+      });
+      if (created) {
+        console.log(`Department created: ${deptData.name} (${deptData.code})`);
+      }
+      departmentDocs[deptData.code] = department.id;
+    }
+
+
+    // 3. Check & Create Dummy Users
     // Password for all dummy accounts will be: "password123"
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('password123', salt);

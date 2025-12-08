@@ -3,6 +3,7 @@ import { LoginForm } from "@/components/login-form"
 import { AuthProvider } from "@/context/AuthContext"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AdminDashboard from "@/pages/admin/Dashboard"
+import CurriculumManagement from "@/pages/admin/CurriculumManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import './App.css'
@@ -28,6 +29,7 @@ function App() {
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             {/* Add other admin routes here, e.g., /admin/users */}
           </Route>
 
