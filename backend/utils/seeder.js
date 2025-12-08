@@ -1,7 +1,5 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const Role = require('../models/roleModel');
-const User = require('../models/userModel');
+const { Role, User } = require('../models');
 
 const seedDatabase = async () => {
   try {
@@ -10,12 +8,14 @@ const seedDatabase = async () => {
     const roleDocs = {};
 
     for (const roleName of roles) {
-      let role = await Role.findOne({ name: roleName });
-      if (!role) {
-        role = await Role.create({ name: roleName });
+      let [role, created] = await Role.findOrCreate({
+        where: { name: roleName },
+        defaults: { name: roleName },
+      });
+      if (created) {
         console.log(`Role created: ${roleName}`);
       }
-      roleDocs[roleName] = role._id;
+      roleDocs[roleName] = role.id;
     }
 
     // 2. Check & Create Dummy Users
@@ -28,26 +28,28 @@ const seedDatabase = async () => {
         fullName: 'Admin User',
         email: 'admin@example.com',
         password: hashedPassword,
-        role: roleDocs['admin'],
+        roleId: roleDocs['admin'],
       },
       {
         fullName: 'Advisor User',
         email: 'advisor@example.com',
         password: hashedPassword,
-        role: roleDocs['advisor'],
+        roleId: roleDocs['advisor'],
       },
       {
         fullName: 'Student User',
         email: 'student@example.com',
         password: hashedPassword,
-        role: roleDocs['student'],
+        roleId: roleDocs['student'],
       },
     ];
 
     for (const userData of users) {
-      const exists = await User.findOne({ email: userData.email });
-      if (!exists) {
-        await User.create(userData);
+      const [user, created] = await User.findOrCreate({
+        where: { email: userData.email },
+        defaults: userData,
+      });
+      if (created) {
         console.log(`User created: ${userData.email} (${userData.fullName})`);
       }
     }
