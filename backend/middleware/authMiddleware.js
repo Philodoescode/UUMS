@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/userModel');
-const Role = require('../models/roleModel');
+const { User, Role } = require('../models');
 
 const protect = async (req, res, next) => {
   try {
@@ -13,7 +12,10 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'defaultsecret');
 
     // Attach user to request (exclude password)
-    req.user = await User.findById(decoded.userId).select('-password').populate('role');
+    req.user = await User.findByPk(decoded.userId, {
+      attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'role' }],
+    });
 
     if (!req.user) {
       return res.status(401).json({ message: 'User not found' });

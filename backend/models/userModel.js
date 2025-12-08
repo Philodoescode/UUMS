@@ -1,49 +1,53 @@
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const mongoose = require('mongoose');
-
-const userSchema = new mongoose.Schema(
-  {
-
-    fullName: {
-      type: String,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      match: [/.+\@.+\..+/, 'Please fill a valid email address'],
-    },
-
-    password: {
-      type: String,
-      required: true,
-    },
-
-
-    role: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Role',
-      required: true,
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  fullName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: { msg: 'Please fill a valid email address' },
     },
   },
-  {
-
-    timestamps: true,
-  }
-);
-
-const User = mongoose.model('User', userSchema);
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  roleId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'roles',
+      key: 'id',
+    },
+  },
+  createdById: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+  },
+}, {
+  tableName: 'users',
+  timestamps: true,
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+});
 
 module.exports = User;

@@ -1,5 +1,4 @@
-const User = require('../models/userModel');
-const Role = require('../models/roleModel');
+const { User, Role } = require('../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -29,13 +28,16 @@ const loginUser = async (req, res) => {
 
   try {
     // Check for user
-    const user = await User.findOne({ email }).populate('role');
+    const user = await User.findOne({
+      where: { email },
+      include: [{ model: Role, as: 'role' }],
+    });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      generateToken(res, user._id);
+      generateToken(res, user.id);
 
       res.json({
-        _id: user._id,
+        _id: user.id,
         fullName: user.fullName,
         email: user.email,
         role: user.role.name,
@@ -66,7 +68,7 @@ const checkAuth = async (req, res) => {
     // The protect middleware already attaches req.user
     const user = req.user;
     res.status(200).json({
-      _id: user._id,
+      _id: user.id,
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,

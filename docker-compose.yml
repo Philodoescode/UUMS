@@ -1,18 +1,18 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:latest
-    container_name: UUMS_mongo_db
+  postgres:
+    image: postgres:latest
+    container_name: UUMS_postgres_db
     restart: always
     ports:
-      - "27017:27017"
+      - "5432:5432"
     environment:
-      # These credentials will be used to create the root user
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      POSTGRES_USER: uums_user
+      POSTGRES_PASSWORD: uums_password
+      POSTGRES_DB: uums_db
     volumes:
-      - mongo-data:/data/db
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  mongo-data:
+  postgres-data:
