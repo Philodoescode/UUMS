@@ -38,6 +38,7 @@ export const ADVISOR_LINKS: NavLink[] = [
  */
 export const STUDENT_LINKS: NavLink[] = [
   { href: "/student/dashboard", label: "Dashboard" },
+  { href: "/student/catalog", label: "Browse Catalog" },
   { href: "/student/academics", label: "Academics" },
   { href: "/student/registration", label: "Course Registration" },
   { href: "/student/community", label: "Community Hub" },

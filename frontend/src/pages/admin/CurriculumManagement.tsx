@@ -230,6 +230,7 @@ const CurriculumManagement = () => {
         onOpenChange={setIsModalOpen}
         course={editingCourse}
         departments={departments}
+        availableCourses={courses}
         onSave={handleSaveCourse}
         isLoading={isSaving}
       />

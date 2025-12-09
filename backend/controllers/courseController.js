@@ -4,7 +4,7 @@ const { Course, Department } = require('../models');
 // @route   POST /api/courses
 const createCourse = async (req, res) => {
   try {
-    const { courseCode, name, description, credits, departmentId, semester, year, capacity } = req.body;
+    const { courseCode, name, description, credits, departmentId, semester, year, capacity, courseType, prerequisiteIds } = req.body;
 
     // Validate required fields
     if (!courseCode || !name || credits === undefined || !departmentId || !semester || !year || !capacity) {
@@ -34,14 +34,25 @@ const createCourse = async (req, res) => {
       semester,
       year,
       capacity,
+      courseType: courseType || 'Core',
     });
 
-    // Fetch with department association
-    const courseWithDept = await Course.findByPk(course.id, {
-      include: [{ model: Department, as: 'department' }],
+    // Set prerequisites if provided
+    if (prerequisiteIds && Array.isArray(prerequisiteIds) && prerequisiteIds.length > 0) {
+      // Filter out the course's own ID to prevent self-referencing
+      const validPrereqIds = prerequisiteIds.filter(id => id !== course.id);
+      await course.setPrerequisites(validPrereqIds);
+    }
+
+    // Fetch with department and prerequisites associations
+    const courseWithAssociations = await Course.findByPk(course.id, {
+      include: [
+        { model: Department, as: 'department' },
+        { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+      ],
     });
 
-    res.status(201).json(courseWithDept);
+    res.status(201).json(courseWithAssociations);
   } catch (error) {
     console.error(error);
     if (error.name === 'SequelizeValidationError') {
@@ -55,7 +66,7 @@ const createCourse = async (req, res) => {
 // @route   GET /api/courses
 const getAllCourses = async (req, res) => {
   try {
-    const { departmentId, semester, year, isActive } = req.query;
+    const { departmentId, semester, year, isActive, courseType } = req.query;
 
     // Build filter conditions
     const where = {};
@@ -63,10 +74,14 @@ const getAllCourses = async (req, res) => {
     if (semester) where.semester = semester;
     if (year) where.year = parseInt(year);
     if (isActive !== undefined) where.isActive = isActive === 'true';
+    if (courseType) where.courseType = courseType;
 
     const courses = await Course.findAll({
       where,
-      include: [{ model: Department, as: 'department' }],
+      include: [
+        { model: Department, as: 'department' },
+        { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+      ],
       order: [['courseCode', 'ASC']],
     });
 
@@ -82,7 +97,10 @@ const getAllCourses = async (req, res) => {
 const getCourseById = async (req, res) => {
   try {
     const course = await Course.findByPk(req.params.id, {
-      include: [{ model: Department, as: 'department' }],
+      include: [
+        { model: Department, as: 'department' },
+        { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+      ],
     });
 
     if (!course) {
@@ -105,7 +123,7 @@ const updateCourse = async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
-    const { courseCode, name, description, credits, departmentId, semester, year, capacity, isActive } = req.body;
+    const { courseCode, name, description, credits, departmentId, semester, year, capacity, isActive, courseType, prerequisiteIds } = req.body;
 
     // Check for duplicate course code if changing
     if (courseCode && courseCode !== course.courseCode) {
@@ -133,11 +151,24 @@ const updateCourse = async (req, res) => {
       year: year !== undefined ? year : course.year,
       capacity: capacity !== undefined ? capacity : course.capacity,
       isActive: isActive !== undefined ? isActive : course.isActive,
+      courseType: courseType !== undefined ? courseType : course.courseType,
     });
+
+    // Update prerequisites if provided
+    if (prerequisiteIds !== undefined) {
+      // Filter out the course's own ID to prevent self-referencing
+      const validPrereqIds = Array.isArray(prerequisiteIds) 
+        ? prerequisiteIds.filter(id => id !== course.id)
+        : [];
+      await course.setPrerequisites(validPrereqIds);
+    }
 
     // Fetch updated course with associations
     const updatedCourse = await Course.findByPk(course.id, {
-      include: [{ model: Department, as: 'department' }],
+      include: [
+        { model: Department, as: 'department' },
+        { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+      ],
     });
 
     res.json(updatedCourse);

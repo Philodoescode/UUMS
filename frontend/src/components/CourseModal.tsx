@@ -18,7 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, FieldError, FieldGroup } from "@/components/ui/field";
+import { PrerequisiteSelector } from "@/components/PrerequisiteSelector";
 import type { Course } from "@/components/CourseCard";
+
+type CourseType = "Core" | "Elective";
 
 interface Department {
   id: string;
@@ -31,7 +34,8 @@ interface CourseModalProps {
   onOpenChange: (open: boolean) => void;
   course?: Course | null;
   departments: Department[];
-  onSave: (course: Partial<Course>) => Promise<void>;
+  availableCourses?: Course[];
+  onSave: (course: Partial<Course> & { prerequisiteIds?: string[] }) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -43,6 +47,7 @@ interface FormErrors {
   semester?: string;
   year?: string;
   capacity?: string;
+  courseType?: string;
 }
 
 export function CourseModal({
@@ -50,6 +55,7 @@ export function CourseModal({
   onOpenChange,
   course,
   departments,
+  availableCourses = [],
   onSave,
   isLoading = false,
 }: CourseModalProps) {
@@ -62,6 +68,8 @@ export function CourseModal({
     semester: "Fall" as "Fall" | "Spring" | "Summer",
     year: new Date().getFullYear().toString(),
     capacity: "30",
+    courseType: "Core" as CourseType,
+    prerequisiteIds: [] as string[],
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -78,6 +86,8 @@ export function CourseModal({
         semester: course.semester,
         year: course.year.toString(),
         capacity: course.capacity.toString(),
+        courseType: course.courseType || "Core",
+        prerequisiteIds: course.prerequisites?.map((p) => p.id) || [],
       });
     } else {
       setFormData({
@@ -89,6 +99,8 @@ export function CourseModal({
         semester: "Fall",
         year: new Date().getFullYear().toString(),
         capacity: "30",
+        courseType: "Core",
+        prerequisiteIds: [],
       });
     }
     setErrors({});
@@ -140,7 +152,9 @@ export function CourseModal({
       semester: formData.semester,
       year: parseInt(formData.year),
       capacity: parseInt(formData.capacity),
-    } as Partial<Course> & { departmentId: string });
+      courseType: formData.courseType,
+      prerequisiteIds: formData.prerequisiteIds,
+    } as Partial<Course> & { departmentId: string; prerequisiteIds: string[] });
   };
 
   return (
@@ -194,6 +208,30 @@ export function CourseModal({
               </Field>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field data-invalid={!!errors.courseType}>
+                <Label htmlFor="courseType">Course Type *</Label>
+                <Select
+                  value={formData.courseType}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      courseType: value as "Core" | "Elective",
+                    })
+                  }
+                >
+                  <SelectTrigger id="courseType" aria-invalid={!!errors.courseType}>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Core">Core</SelectItem>
+                    <SelectItem value="Elective">Elective</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.courseType && <FieldError>{errors.courseType}</FieldError>}
+              </Field>
+            </div>
+
             <Field data-invalid={!!errors.name}>
               <Label htmlFor="name">Course Name *</Label>
               <Input
@@ -217,6 +255,20 @@ export function CourseModal({
                 }
                 className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 rows={3}
+              />
+            </Field>
+
+            {/* Prerequisites */}
+            <Field>
+              <Label>Prerequisites</Label>
+              <PrerequisiteSelector
+                availableCourses={availableCourses}
+                selectedIds={formData.prerequisiteIds}
+                onChange={(ids) =>
+                  setFormData({ ...formData, prerequisiteIds: ids })
+                }
+                excludeCourseId={course?.id}
+                disabled={isLoading}
               />
             </Field>
 

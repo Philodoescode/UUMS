@@ -6,6 +6,7 @@ import AdminDashboard from "@/pages/admin/Dashboard"
 import CurriculumManagement from "@/pages/admin/CurriculumManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
+import CourseCatalog from "@/pages/student/CourseCatalog"
 import './App.css'
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
              {/* Redirect /student to /student/dashboard */}
             <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/catalog" element={<CourseCatalog />} />
             {/* Add other student routes here, e.g., /student/academics */}
           </Route>
 
