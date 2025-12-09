@@ -90,6 +90,17 @@ const Course = sequelize.define('Course', {
       },
     },
   },
+  courseType: {
+    type: DataTypes.ENUM('Core', 'Elective'),
+    allowNull: false,
+    defaultValue: 'Core',
+    validate: {
+      isIn: {
+        args: [['Core', 'Elective']],
+        msg: 'Course type must be Core or Elective',
+      },
+    },
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
