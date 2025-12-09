@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, FieldError, FieldGroup } from "@/components/ui/field";
+import { PrerequisiteSelector } from "@/components/PrerequisiteSelector";
 import type { Course } from "@/components/CourseCard";
 
 type CourseType = "Core" | "Elective";
@@ -33,7 +34,8 @@ interface CourseModalProps {
   onOpenChange: (open: boolean) => void;
   course?: Course | null;
   departments: Department[];
-  onSave: (course: Partial<Course>) => Promise<void>;
+  availableCourses?: Course[];
+  onSave: (course: Partial<Course> & { prerequisiteIds?: string[] }) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -53,6 +55,7 @@ export function CourseModal({
   onOpenChange,
   course,
   departments,
+  availableCourses = [],
   onSave,
   isLoading = false,
 }: CourseModalProps) {
@@ -66,6 +69,7 @@ export function CourseModal({
     year: new Date().getFullYear().toString(),
     capacity: "30",
     courseType: "Core" as CourseType,
+    prerequisiteIds: [] as string[],
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -83,6 +87,7 @@ export function CourseModal({
         year: course.year.toString(),
         capacity: course.capacity.toString(),
         courseType: course.courseType || "Core",
+        prerequisiteIds: course.prerequisites?.map((p) => p.id) || [],
       });
     } else {
       setFormData({
@@ -95,6 +100,7 @@ export function CourseModal({
         year: new Date().getFullYear().toString(),
         capacity: "30",
         courseType: "Core",
+        prerequisiteIds: [],
       });
     }
     setErrors({});
@@ -147,7 +153,8 @@ export function CourseModal({
       year: parseInt(formData.year),
       capacity: parseInt(formData.capacity),
       courseType: formData.courseType,
-    } as Partial<Course> & { departmentId: string });
+      prerequisiteIds: formData.prerequisiteIds,
+    } as Partial<Course> & { departmentId: string; prerequisiteIds: string[] });
   };
 
   return (
@@ -248,6 +255,20 @@ export function CourseModal({
                 }
                 className="flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 rows={3}
+              />
+            </Field>
+
+            {/* Prerequisites */}
+            <Field>
+              <Label>Prerequisites</Label>
+              <PrerequisiteSelector
+                availableCourses={availableCourses}
+                selectedIds={formData.prerequisiteIds}
+                onChange={(ids) =>
+                  setFormData({ ...formData, prerequisiteIds: ids })
+                }
+                excludeCourseId={course?.id}
+                disabled={isLoading}
               />
             </Field>
 
