@@ -3,6 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PencilIcon, TrashIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 
+export interface PrerequisiteCourse {
+  id: string;
+  courseCode: string;
+  name: string;
+}
+
 export interface Course {
   id: string;
   courseCode: string;
@@ -13,6 +19,8 @@ export interface Course {
   year: number;
   capacity: number;
   isActive: boolean;
+  courseType: "Core" | "Elective";
+  prerequisites?: PrerequisiteCourse[];
   department?: {
     id: string;
     code: string;
@@ -38,6 +46,15 @@ export function CourseCard({ course, onEdit, onDelete }: CourseCardProps) {
               </Badge>
               <Badge variant="outline">
                 {course.semester} {course.year}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={course.courseType === "Core" 
+                  ? "border-blue-500 text-blue-600 bg-blue-50" 
+                  : "border-green-500 text-green-600 bg-green-50"
+                }
+              >
+                {course.courseType}
               </Badge>
             </div>
             <CardTitle className="mt-2 text-lg truncate">{course.name}</CardTitle>

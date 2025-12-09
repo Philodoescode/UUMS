@@ -20,6 +20,8 @@ import {
 import { Field, FieldError, FieldGroup } from "@/components/ui/field";
 import type { Course } from "@/components/CourseCard";
 
+type CourseType = "Core" | "Elective";
+
 interface Department {
   id: string;
   code: string;
@@ -43,6 +45,7 @@ interface FormErrors {
   semester?: string;
   year?: string;
   capacity?: string;
+  courseType?: string;
 }
 
 export function CourseModal({
@@ -62,6 +65,7 @@ export function CourseModal({
     semester: "Fall" as "Fall" | "Spring" | "Summer",
     year: new Date().getFullYear().toString(),
     capacity: "30",
+    courseType: "Core" as CourseType,
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -78,6 +82,7 @@ export function CourseModal({
         semester: course.semester,
         year: course.year.toString(),
         capacity: course.capacity.toString(),
+        courseType: course.courseType || "Core",
       });
     } else {
       setFormData({
@@ -89,6 +94,7 @@ export function CourseModal({
         semester: "Fall",
         year: new Date().getFullYear().toString(),
         capacity: "30",
+        courseType: "Core",
       });
     }
     setErrors({});
@@ -140,6 +146,7 @@ export function CourseModal({
       semester: formData.semester,
       year: parseInt(formData.year),
       capacity: parseInt(formData.capacity),
+      courseType: formData.courseType,
     } as Partial<Course> & { departmentId: string });
   };
 
@@ -191,6 +198,30 @@ export function CourseModal({
                   </SelectContent>
                 </Select>
                 {errors.departmentId && <FieldError>{errors.departmentId}</FieldError>}
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field data-invalid={!!errors.courseType}>
+                <Label htmlFor="courseType">Course Type *</Label>
+                <Select
+                  value={formData.courseType}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      courseType: value as "Core" | "Elective",
+                    })
+                  }
+                >
+                  <SelectTrigger id="courseType" aria-invalid={!!errors.courseType}>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Core">Core</SelectItem>
+                    <SelectItem value="Elective">Elective</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.courseType && <FieldError>{errors.courseType}</FieldError>}
               </Field>
             </div>
 
