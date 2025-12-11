@@ -7,6 +7,8 @@ import CurriculumManagement from "@/pages/admin/CurriculumManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
+import Academics from "@/pages/student/Academics"
+import CourseDetails from "@/pages/student/CourseDetails"
 import './App.css'
 
 function App() {
@@ -24,7 +26,7 @@ function App() {
           } />
 
           {/* Protected Routes */}
-          
+
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             {/* Redirect /admin to /admin/dashboard */}
@@ -44,11 +46,13 @@ function App() {
 
           {/* Student Routes */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-             {/* Redirect /student to /student/dashboard */}
+            {/* Redirect /student to /student/dashboard */}
             <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/catalog" element={<CourseCatalog />} />
-            {/* Add other student routes here, e.g., /student/academics */}
+            <Route path="/student/academics" element={<Academics />} />
+            <Route path="/student/academics/:courseId" element={<CourseDetails />} />
+            {/* Add other student routes here */}
           </Route>
 
           {/* Catch all */}

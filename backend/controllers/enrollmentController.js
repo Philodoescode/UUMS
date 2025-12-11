@@ -298,6 +298,87 @@ const registerForCourse = async (req, res) => {
   }
 };
 
+// @desc    Get current student's enrolled courses
+// @route   GET /api/enrollments/my-courses
+const getMyEnrollments = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Verify user is a student
+    if (req.user.role?.name !== 'student') {
+      return res.status(403).json({ message: 'Only students can access their enrollments' });
+    }
+
+    const enrollments = await Enrollment.findAll({
+      where: {
+        userId,
+        status: { [Op.in]: ['enrolled', 'completed', 'waitlisted'] }
+      },
+      include: [
+        {
+          model: Course,
+          as: 'course',
+          include: [
+            { model: Department, as: 'department' },
+            { model: Course, as: 'prerequisites' }
+          ],
+        },
+      ],
+      order: [['enrolledAt', 'DESC']],
+    });
+
+    res.json(enrollments);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get student's grade for a specific course
+// @route   GET /api/enrollments/my-grade/:courseId
+const getMyGrade = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { courseId } = req.params;
+
+    // Verify user is a student
+    if (req.user.role?.name !== 'student') {
+      return res.status(403).json({ message: 'Only students can access their grades' });
+    }
+
+    const enrollment = await Enrollment.findOne({
+      where: {
+        userId,
+        courseId,
+      },
+      include: [
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['id', 'courseCode', 'name'],
+        },
+      ],
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ message: 'Enrollment not found for this course' });
+    }
+
+    res.json({
+      courseId: enrollment.courseId,
+      courseName: enrollment.course.name,
+      courseCode: enrollment.course.courseCode,
+      status: enrollment.status,
+      grade: enrollment.grade,
+      feedback: enrollment.feedback,
+      enrolledAt: enrollment.enrolledAt,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createEnrollment,
   getAllEnrollments,
@@ -305,4 +386,6 @@ module.exports = {
   updateEnrollment,
   deleteEnrollment,
   registerForCourse,
+  getMyEnrollments,
+  getMyGrade,
 };

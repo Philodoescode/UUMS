@@ -7,14 +7,18 @@ const {
   updateEnrollment,
   deleteEnrollment,
   registerForCourse,
+  getMyEnrollments,
+  getMyGrade,
 } = require('../controllers/enrollmentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 // All routes require authentication
 router.use(protect);
 
-// Student registration route - accessible to students
+// Student routes
 router.post('/register', authorize('student'), registerForCourse);
+router.get('/my-courses', authorize('student'), getMyEnrollments);
+router.get('/my-grade/:courseId', authorize('student'), getMyGrade);
 
 // GET routes - accessible to all authenticated users
 router.get('/', getAllEnrollments);
