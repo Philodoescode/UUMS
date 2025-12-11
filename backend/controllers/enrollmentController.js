@@ -42,9 +42,9 @@ const createEnrollment = async (req, res) => {
 
     // Check course capacity
     const enrolledCount = await Enrollment.count({
-      where: { 
-        courseId, 
-        status: { [Op.in]: ['enrolled', 'waitlisted'] } 
+      where: {
+        courseId,
+        status: { [Op.in]: ['enrolled', 'waitlisted'] }
       },
     });
 
@@ -63,8 +63,8 @@ const createEnrollment = async (req, res) => {
     const enrollmentWithAssoc = await Enrollment.findByPk(enrollment.id, {
       include: [
         { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
           include: [{ model: Department, as: 'department' }],
         },
@@ -96,8 +96,8 @@ const getAllEnrollments = async (req, res) => {
       where,
       include: [
         { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
           include: [{ model: Department, as: 'department' }],
         },
@@ -119,8 +119,8 @@ const getEnrollmentById = async (req, res) => {
     const enrollment = await Enrollment.findByPk(req.params.id, {
       include: [
         { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
           include: [{ model: Department, as: 'department' }],
         },
@@ -158,8 +158,8 @@ const updateEnrollment = async (req, res) => {
     const updatedEnrollment = await Enrollment.findByPk(enrollment.id, {
       include: [
         { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
           include: [{ model: Department, as: 'department' }],
         },
@@ -193,10 +193,116 @@ const deleteEnrollment = async (req, res) => {
   }
 };
 
+// @desc    Register for a course (Student self-registration)
+// @route   POST /api/enrollments/register
+const registerForCourse = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    const userId = req.user.id; // From auth middleware
+
+    if (!courseId) {
+      return res.status(400).json({ message: 'courseId is required' });
+    }
+
+    // Check user role
+    if (req.user.role?.name !== 'student') {
+      return res.status(403).json({ message: 'Only students can register for courses' });
+    }
+
+    // 1. Check course exists and is active
+    const course = await Course.findByPk(courseId, {
+      include: [
+        { model: Course, as: 'prerequisites' }
+      ]
+    });
+
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    if (!course.isActive) {
+      return res.status(400).json({ message: 'Course is not active' });
+    }
+
+    // 2. Check if already enrolled or waitlisted
+    const existingEnrollment = await Enrollment.findOne({
+      where: { userId, courseId },
+    });
+    if (existingEnrollment) {
+      return res.status(400).json({
+        message: `You are already ${existingEnrollment.status} in this course`
+      });
+    }
+
+    // 3. Check Prerequisites
+    if (course.prerequisites && course.prerequisites.length > 0) {
+      const prerequisiteIds = course.prerequisites.map(p => p.id);
+
+      const completedPrerequisites = await Enrollment.count({
+        where: {
+          userId,
+          courseId: { [Op.in]: prerequisiteIds },
+          status: 'completed'
+        }
+      });
+
+      if (completedPrerequisites < prerequisiteIds.length) {
+        const missingPrereqs = course.prerequisites.map(p => p.courseCode).join(', ');
+        return res.status(400).json({
+          message: `You have not completed all prerequisites for this course. Required: ${missingPrereqs}`
+        });
+      }
+    }
+
+    // 4. Check Capacity
+    const enrolledCount = await Enrollment.count({
+      where: {
+        courseId,
+        status: { [Op.in]: ['enrolled', 'waitlisted'] }
+      },
+    });
+
+    let status = 'enrolled';
+    let message = 'Successfully registered for course';
+
+    if (enrolledCount >= course.capacity) {
+      status = 'waitlisted';
+      message = 'Course is full. You have been added to the waitlist.';
+    }
+
+    // 5. Create Enrollment
+    const enrollment = await Enrollment.create({
+      userId,
+      courseId,
+      status,
+    });
+
+    const enrollmentWithAssoc = await Enrollment.findByPk(enrollment.id, {
+      include: [
+        { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
+        {
+          model: Course,
+          as: 'course',
+          include: [{ model: Department, as: 'department' }],
+        },
+      ],
+    });
+
+    res.status(201).json({
+      message,
+      enrollment: enrollmentWithAssoc
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createEnrollment,
   getAllEnrollments,
   getEnrollmentById,
   updateEnrollment,
   deleteEnrollment,
+  registerForCourse,
 };
