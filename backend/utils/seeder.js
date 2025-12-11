@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Role, User, Department } = require('../models');
+const { Role, User, Department, Instructor } = require('../models');
 
 const seedDatabase = async () => {
   try {
@@ -66,6 +66,7 @@ const seedDatabase = async () => {
       },
     ];
 
+    const createdUsers = {};
     for (const userData of users) {
       const [user, created] = await User.findOrCreate({
         where: { email: userData.email },
@@ -73,6 +74,24 @@ const seedDatabase = async () => {
       });
       if (created) {
         console.log(`User created: ${userData.email} (${userData.fullName})`);
+      }
+      createdUsers[userData.email] = user;
+    }
+
+    // 4. Create Instructor profiles for users with instructor role
+    const instructorUser = createdUsers['instructor@example.com'];
+    if (instructorUser) {
+      const [instructor, created] = await Instructor.findOrCreate({
+        where: { userId: instructorUser.id },
+        defaults: {
+          userId: instructorUser.id,
+          departmentId: departmentDocs['CS'], // Assign to Computer Science department
+          title: 'Professor',
+          officeLocation: 'Room 101',
+        },
+      });
+      if (created) {
+        console.log(`Instructor profile created for: ${instructorUser.email}`);
       }
     }
 
