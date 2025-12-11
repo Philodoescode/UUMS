@@ -1,4 +1,4 @@
-const { Course, Department } = require('../models');
+const { Course, Department, Instructor, User, CourseInstructor } = require('../models');
 
 // @desc    Create a new course
 // @route   POST /api/courses
@@ -8,8 +8,8 @@ const createCourse = async (req, res) => {
 
     // Validate required fields
     if (!courseCode || !name || credits === undefined || !departmentId || !semester || !year || !capacity) {
-      return res.status(400).json({ 
-        message: 'courseCode, name, credits, departmentId, semester, year, and capacity are required' 
+      return res.status(400).json({
+        message: 'courseCode, name, credits, departmentId, semester, year, and capacity are required'
       });
     }
 
@@ -157,7 +157,7 @@ const updateCourse = async (req, res) => {
     // Update prerequisites if provided
     if (prerequisiteIds !== undefined) {
       // Filter out the course's own ID to prevent self-referencing
-      const validPrereqIds = Array.isArray(prerequisiteIds) 
+      const validPrereqIds = Array.isArray(prerequisiteIds)
         ? prerequisiteIds.filter(id => id !== course.id)
         : [];
       await course.setPrerequisites(validPrereqIds);
@@ -199,10 +199,125 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+// @desc    Get instructors assigned to a course
+// @route   GET /api/courses/:id/instructors
+const getCourseInstructors = async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id, {
+      include: [
+        {
+          model: Instructor,
+          as: 'instructors',
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] },
+            { model: Department, as: 'department' },
+          ],
+        },
+      ],
+    });
+
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    res.json(course.instructors || []);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Assign instructor to a course
+// @route   POST /api/courses/:id/instructors
+const assignInstructor = async (req, res) => {
+  try {
+    const { instructorId, isPrimary } = req.body;
+    const courseId = req.params.id;
+
+    if (!instructorId) {
+      return res.status(400).json({ message: 'instructorId is required' });
+    }
+
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const instructor = await Instructor.findByPk(instructorId, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'fullName', 'email'] }],
+    });
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    // Check if already assigned
+    const existing = await CourseInstructor.findOne({
+      where: { courseId, instructorId },
+    });
+
+    if (existing) {
+      // Update isPrimary if changing
+      if (isPrimary !== undefined && existing.isPrimary !== isPrimary) {
+        await existing.update({ isPrimary });
+        return res.json({
+          message: 'Instructor assignment updated',
+          isPrimary,
+        });
+      }
+      return res.status(400).json({ message: 'Instructor already assigned to this course' });
+    }
+
+    // Create assignment
+    await CourseInstructor.create({
+      courseId,
+      instructorId,
+      isPrimary: isPrimary || false,
+    });
+
+    res.status(201).json({
+      message: 'Instructor assigned successfully',
+      instructor: {
+        id: instructor.id,
+        name: instructor.user.fullName,
+        email: instructor.user.email,
+        isPrimary: isPrimary || false,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Remove instructor from a course
+// @route   DELETE /api/courses/:courseId/instructors/:instructorId
+const removeInstructor = async (req, res) => {
+  try {
+    const { id: courseId, instructorId } = req.params;
+
+    const assignment = await CourseInstructor.findOne({
+      where: { courseId, instructorId },
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Instructor not assigned to this course' });
+    }
+
+    await assignment.destroy();
+    res.json({ message: 'Instructor removed from course successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createCourse,
   getAllCourses,
   getCourseById,
   updateCourse,
   deleteCourse,
+  getCourseInstructors,
+  assignInstructor,
+  removeInstructor,
 };

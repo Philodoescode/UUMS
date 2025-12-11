@@ -4,7 +4,7 @@ const { Role, User, Department } = require('../models');
 const seedDatabase = async () => {
   try {
     // 1. Check & Create Roles
-    const roles = ['admin', 'advisor', 'student'];
+    const roles = ['admin', 'instructor', 'student'];
     const roleDocs = {};
 
     for (const roleName of roles) {
@@ -53,10 +53,10 @@ const seedDatabase = async () => {
         roleId: roleDocs['admin'],
       },
       {
-        fullName: 'Advisor User',
-        email: 'advisor@example.com',
+        fullName: 'Instructor User',
+        email: 'instructor@example.com',
         password: hashedPassword,
-        roleId: roleDocs['advisor'],
+        roleId: roleDocs['instructor'],
       },
       {
         fullName: 'Student User',
@@ -75,7 +75,7 @@ const seedDatabase = async () => {
         console.log(`User created: ${userData.email} (${userData.fullName})`);
       }
     }
-    
+
     console.log('Database Seeding Complete.');
   } catch (error) {
     console.error('Seeding Error:', error);

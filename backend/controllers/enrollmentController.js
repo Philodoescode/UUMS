@@ -365,6 +365,7 @@ const getMyGrade = async (req, res) => {
     }
 
     res.json({
+      enrollmentId: enrollment.id,
       courseId: enrollment.courseId,
       courseName: enrollment.course.name,
       courseCode: enrollment.course.courseCode,

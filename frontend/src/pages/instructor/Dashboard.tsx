@@ -1,9 +1,9 @@
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
-import { ADVISOR_LINKS } from "@/config/navLinks";
+import { INSTRUCTOR_LINKS } from "@/config/navLinks";
 
 // A shared Welcome Card component can be extracted to a common components folder later
-const WelcomeCard = ({ title, roleColor }: { title: string; roleColor:string }) => {
+const WelcomeCard = ({ title, roleColor }: { title: string; roleColor: string }) => {
   const { user } = useAuth();
 
   return (
@@ -16,7 +16,7 @@ const WelcomeCard = ({ title, roleColor }: { title: string; roleColor:string }) 
           <p><strong>Email:</strong> {user?.email}</p>
           <p><strong>User ID:</strong> {user?._id}</p>
         </div>
-        <p className="text-muted-foreground text-xs pt-4">This is the main content area for the advisor dashboard. The navbar above is configured with advisor-specific links.</p>
+        <p className="text-muted-foreground text-xs pt-4">This is the main content area for the instructor dashboard. The navbar above is configured with instructor-specific links.</p>
       </div>
     </div>
   );
@@ -29,13 +29,13 @@ const PageContent = ({ children }: { children: React.ReactNode }) => (
   </main>
 );
 
-const AdvisorDashboard = () => (
+const InstructorDashboard = () => (
   <div className="flex flex-col min-h-screen">
-    <Navbar links={ADVISOR_LINKS} />
+    <Navbar links={INSTRUCTOR_LINKS} />
     <PageContent>
-      <WelcomeCard title="Advisor Dashboard" roleColor="border-blue-500" />
+      <WelcomeCard title="Instructor Dashboard" roleColor="border-blue-500" />
     </PageContent>
   </div>
 );
 
-export default AdvisorDashboard;
+export default InstructorDashboard;

@@ -22,8 +22,14 @@ import {
     StarIcon,
     MessageSquareIcon,
     Loader2Icon,
+    ScaleIcon,
+    SendIcon,
+    CheckCircleIcon,
+    ClockIcon,
+    XCircleIcon,
 } from "lucide-react";
 import api from "@/lib/api";
+import { AxiosError } from "axios";
 
 interface Course {
     id: string;
@@ -49,6 +55,18 @@ interface GradeInfo {
     grade: string | null;
     feedback: string | null;
     status: string;
+    enrollmentId?: string;
+}
+
+interface Appeal {
+    id: string;
+    status: 'pending' | 'reviewed' | 'resolved';
+    reason: string;
+    currentGrade: string | null;
+    newGrade: string | null;
+    professorResponse: string | null;
+    createdAt: string;
+    resolvedAt: string | null;
 }
 
 const CourseDetails = () => {
@@ -60,6 +78,13 @@ const CourseDetails = () => {
     const [gradeInfo, setGradeInfo] = useState<GradeInfo | null>(null);
     const [isLoadingGrade, setIsLoadingGrade] = useState(false);
     const [showGrade, setShowGrade] = useState(false);
+
+    // Appeal state
+    const [appeal, setAppeal] = useState<Appeal | null>(null);
+    const [showAppealForm, setShowAppealForm] = useState(false);
+    const [appealReason, setAppealReason] = useState("");
+    const [isSubmittingAppeal, setIsSubmittingAppeal] = useState(false);
+    const [appealMessage, setAppealMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     const fetchCourse = useCallback(async () => {
         if (!courseId) return;
@@ -87,8 +112,11 @@ const CourseDetails = () => {
                 grade: response.data.grade,
                 feedback: response.data.feedback,
                 status: response.data.status,
+                enrollmentId: response.data.enrollmentId,
             });
             setShowGrade(true);
+            // Also fetch appeal status
+            fetchAppeal();
         } catch (err: unknown) {
             console.error("Failed to load grade:", err);
             setGradeInfo(null);
@@ -97,6 +125,69 @@ const CourseDetails = () => {
             setIsLoadingGrade(false);
         }
     }, [courseId]);
+
+    const fetchAppeal = useCallback(async () => {
+        if (!courseId) return;
+        try {
+            const response = await api.get(`/appeals/course/${courseId}`);
+            setAppeal(response.data);
+        } catch (err: unknown) {
+            console.error("Failed to load appeal:", err);
+            setAppeal(null);
+        }
+    }, [courseId]);
+
+    const handleSubmitAppeal = async () => {
+        if (!gradeInfo?.enrollmentId || !appealReason.trim()) return;
+
+        setIsSubmittingAppeal(true);
+        setAppealMessage(null);
+
+        try {
+            const response = await api.post('/appeals', {
+                enrollmentId: gradeInfo.enrollmentId,
+                reason: appealReason.trim(),
+            });
+            setAppeal(response.data.appeal);
+            setAppealMessage({ type: 'success', text: 'Appeal submitted successfully!' });
+            setShowAppealForm(false);
+            setAppealReason("");
+        } catch (err: unknown) {
+            let errorMessage = 'Failed to submit appeal';
+            if (err instanceof AxiosError && err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            }
+            setAppealMessage({ type: 'error', text: errorMessage });
+        } finally {
+            setIsSubmittingAppeal(false);
+        }
+    };
+
+    const getAppealStatusIcon = (status: string) => {
+        switch (status) {
+            case 'pending':
+                return <ClockIcon className="size-4 text-yellow-600" />;
+            case 'reviewed':
+                return <RefreshCwIcon className="size-4 text-blue-600" />;
+            case 'resolved':
+                return <CheckCircleIcon className="size-4 text-green-600" />;
+            default:
+                return <ClockIcon className="size-4" />;
+        }
+    };
+
+    const getAppealStatusColor = (status: string) => {
+        switch (status) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-700 border-yellow-300';
+            case 'reviewed':
+                return 'bg-blue-100 text-blue-700 border-blue-300';
+            case 'resolved':
+                return 'bg-green-100 text-green-700 border-green-300';
+            default:
+                return 'bg-gray-100 text-gray-700';
+        }
+    };
 
     useEffect(() => {
         fetchCourse();
@@ -309,6 +400,122 @@ const CourseDetails = () => {
                                                         <p className="text-muted-foreground leading-relaxed">
                                                             {gradeInfo.feedback}
                                                         </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Appeal Section */}
+                                                {gradeInfo.grade && (
+                                                    <div className="border rounded-lg p-4 mt-4">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <h4 className="flex items-center gap-2 font-medium">
+                                                                <ScaleIcon className="size-4" />
+                                                                Grade Appeal
+                                                            </h4>
+                                                        </div>
+
+                                                        {/* Appeal Message */}
+                                                        {appealMessage && (
+                                                            <div className={`flex items-center gap-2 p-3 rounded-lg mb-3 ${appealMessage.type === 'success'
+                                                                    ? 'bg-green-50 text-green-700 border border-green-200'
+                                                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                                                }`}>
+                                                                {appealMessage.type === 'success' ? (
+                                                                    <CheckCircleIcon className="size-4" />
+                                                                ) : (
+                                                                    <XCircleIcon className="size-4" />
+                                                                )}
+                                                                <p className="text-sm">{appealMessage.text}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Existing Appeal Status */}
+                                                        {appeal ? (
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    {getAppealStatusIcon(appeal.status)}
+                                                                    <Badge className={getAppealStatusColor(appeal.status)}>
+                                                                        {appeal.status.charAt(0).toUpperCase() + appeal.status.slice(1)}
+                                                                    </Badge>
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        Submitted: {new Date(appeal.createdAt).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="bg-muted/30 rounded p-3">
+                                                                    <p className="text-sm font-medium mb-1">Your Appeal:</p>
+                                                                    <p className="text-sm text-muted-foreground">{appeal.reason}</p>
+                                                                </div>
+                                                                {appeal.professorResponse && (
+                                                                    <div className="bg-blue-50 rounded p-3 border border-blue-200">
+                                                                        <p className="text-sm font-medium mb-1 text-blue-800">Professor Response:</p>
+                                                                        <p className="text-sm text-blue-700">{appeal.professorResponse}</p>
+                                                                        {appeal.newGrade && (
+                                                                            <p className="text-sm font-medium mt-2 text-blue-800">
+                                                                                Updated Grade: <span className="font-bold">{appeal.newGrade}</span>
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : showAppealForm ? (
+                                                            /* Appeal Form */
+                                                            <div className="space-y-3">
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Explain why you believe your grade should be reconsidered:
+                                                                </p>
+                                                                <textarea
+                                                                    className="w-full min-h-[120px] p-3 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                    placeholder="Provide a detailed explanation for your appeal (minimum 10 characters)..."
+                                                                    value={appealReason}
+                                                                    onChange={(e) => setAppealReason(e.target.value)}
+                                                                    disabled={isSubmittingAppeal}
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <Button
+                                                                        onClick={handleSubmitAppeal}
+                                                                        disabled={isSubmittingAppeal || appealReason.trim().length < 10}
+                                                                        className="gap-2"
+                                                                    >
+                                                                        {isSubmittingAppeal ? (
+                                                                            <>
+                                                                                <Loader2Icon className="size-4 animate-spin" />
+                                                                                Submitting...
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <SendIcon className="size-4" />
+                                                                                Submit Appeal
+                                                                            </>
+                                                                        )}
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        onClick={() => {
+                                                                            setShowAppealForm(false);
+                                                                            setAppealReason("");
+                                                                            setAppealMessage(null);
+                                                                        }}
+                                                                        disabled={isSubmittingAppeal}
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* Request Appeal Button */
+                                                            <div>
+                                                                <p className="text-sm text-muted-foreground mb-3">
+                                                                    If you believe your grade was incorrectly assigned, you can request an appeal.
+                                                                </p>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => setShowAppealForm(true)}
+                                                                    className="gap-2"
+                                                                >
+                                                                    <ScaleIcon className="size-4" />
+                                                                    Request Appeal
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
 
