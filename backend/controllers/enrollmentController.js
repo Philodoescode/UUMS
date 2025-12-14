@@ -1,6 +1,42 @@
 const { Enrollment, User, Course, Role, Department } = require('../models');
 const { Op } = require('sequelize');
 
+// @desc    Approve or Reject Enrollment (Advisor)
+// @route   PUT /api/enrollments/:id/approval
+const approveEnrollment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'enrolled' (approve) or 'dropped' (reject)
+    const advisorId = req.user.id;
+
+    if (!['enrolled', 'dropped'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Use "enrolled" to approve or "dropped" to reject.' });
+    }
+
+    const enrollment = await Enrollment.findByPk(id, {
+      include: [{ model: User, as: 'student' }]
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    // Check if current user is the student's advisor
+    if (enrollment.student.advisorId !== advisorId && req.user.role.name !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to approve this enrollment' });
+    }
+
+    enrollment.status = status;
+    await enrollment.save();
+
+    res.json({ message: `Enrollment ${status === 'enrolled' ? 'approved' : 'rejected'} successfully`, enrollment });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Create a new enrollment
 // @route   POST /api/enrollments
 const createEnrollment = async (req, res) => {
@@ -92,16 +128,29 @@ const getAllEnrollments = async (req, res) => {
     if (courseId) where.courseId = courseId;
     if (status) where.status = status;
 
+    // Special logic for Advisor: restrict to assigned students
+    const user = req.user; // populated by protect middleware
+    if (user.role.name === 'advisor') {
+      // This is tricky without a join on the where clause for the include.
+      // Sequelize allows this.
+    }
+
+    const includeOptions = [
+      { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
+      {
+        model: Course,
+        as: 'course',
+        include: [{ model: Department, as: 'department' }]
+      }
+    ];
+
+    if (user.role.name === 'advisor') {
+      includeOptions[0].where = { advisorId: user.id };
+    }
+
     const enrollments = await Enrollment.findAll({
       where,
-      include: [
-        { model: User, as: 'student', attributes: ['id', 'fullName', 'email'] },
-        {
-          model: Course,
-          as: 'course',
-          include: [{ model: Department, as: 'department' }],
-        },
-      ],
+      include: includeOptions,
       order: [['enrolledAt', 'DESC']],
     });
 
@@ -267,6 +316,10 @@ const registerForCourse = async (req, res) => {
     if (enrolledCount >= course.capacity) {
       status = 'waitlisted';
       message = 'Course is full. You have been added to the waitlist.';
+    } else if (req.user.advisorId) {
+      // New Logic: If student has an advisor, set generic status to pending
+      status = 'pending';
+      message = 'Registration pending advisor approval.';
     }
 
     // 5. Create Enrollment
@@ -389,4 +442,5 @@ module.exports = {
   registerForCourse,
   getMyEnrollments,
   getMyGrade,
+  approveEnrollment,
 };

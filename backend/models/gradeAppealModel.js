@@ -9,11 +9,24 @@ const GradeAppeal = sequelize.define('GradeAppeal', {
     },
     enrollmentId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true, // Specific for Course Grade Appeal
         references: {
             model: 'enrollments',
             key: 'id',
         },
+    },
+    submissionId: { // Specific for Assessment Appeal
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'assessment_submissions',
+            key: 'id',
+        },
+    },
+    type: {
+        type: DataTypes.ENUM('COURSE_GRADE', 'ASSESSMENT_GRADE'),
+        allowNull: false,
+        defaultValue: 'COURSE_GRADE',
     },
     studentId: {
         type: DataTypes.UUID,

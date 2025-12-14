@@ -9,6 +9,12 @@ const Prerequisite = require('./prerequisiteModel');
 const Enrollment = require('./enrollmentModel');
 const GradeAppeal = require('./gradeAppealModel');
 const GradeAuditLog = require('./gradeAuditLogModel');
+const Assessment = require('./assessmentModel');
+
+const AssessmentSubmission = require('./assessmentSubmissionModel');
+const Announcement = require('./announcementModel');
+const ElectiveRequest = require('./electiveRequestModel');
+const Material = require('./materialModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -72,6 +78,9 @@ GradeAppeal.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 
 GradeAppeal.belongsTo(User, { foreignKey: 'resolvedById', as: 'resolvedBy' });
 
+GradeAppeal.belongsTo(AssessmentSubmission, { foreignKey: 'submissionId', as: 'submission' });
+AssessmentSubmission.hasMany(GradeAppeal, { foreignKey: 'submissionId', as: 'appeals' });
+
 // ===== Grade Audit Log Associations =====
 Enrollment.hasMany(GradeAuditLog, { foreignKey: 'enrollmentId', as: 'auditLogs' });
 GradeAuditLog.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollment' });
@@ -79,6 +88,42 @@ GradeAuditLog.belongsTo(Enrollment, { foreignKey: 'enrollmentId', as: 'enrollmen
 GradeAuditLog.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 GradeAuditLog.belongsTo(User, { foreignKey: 'advisorId', as: 'advisor' });
 GradeAuditLog.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+// ===== Assessment Associations =====
+Course.hasMany(Assessment, { foreignKey: 'courseId', as: 'assessments' });
+Assessment.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+Assessment.hasMany(AssessmentSubmission, { foreignKey: 'assessmentId', as: 'submissions' });
+AssessmentSubmission.belongsTo(Assessment, { foreignKey: 'assessmentId', as: 'assessment' });
+
+User.hasMany(AssessmentSubmission, { foreignKey: 'studentId', as: 'assessmentSubmissions' });
+
+AssessmentSubmission.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+
+// ===== Announcement Associations =====
+Course.hasMany(Announcement, { foreignKey: 'courseId', as: 'announcements' });
+Announcement.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+Instructor.hasMany(Announcement, { foreignKey: 'instructorId', as: 'announcements' });
+Announcement.belongsTo(Instructor, { foreignKey: 'instructorId', as: 'instructor' });
+
+// ===== Elective Request Associations =====
+User.hasMany(ElectiveRequest, { foreignKey: 'studentId', as: 'electiveRequests' });
+ElectiveRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+
+Course.hasMany(ElectiveRequest, { foreignKey: 'courseId', as: 'electiveRequests' });
+ElectiveRequest.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+User.hasMany(ElectiveRequest, { foreignKey: 'advisorId', as: 'reviewedRequests' });
+ElectiveRequest.belongsTo(User, { foreignKey: 'advisorId', as: 'advisor' });
+
+// ===== User & Advisor Association (Self-referencing) =====
+User.belongsTo(User, { foreignKey: 'advisorId', as: 'advisor' });
+User.hasMany(User, { foreignKey: 'advisorId', as: 'advisees' });
+
+// ===== Material Associations =====
+Course.hasMany(Material, { foreignKey: 'courseId', as: 'materials' });
+Material.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
 module.exports = {
   sequelize,
@@ -92,4 +137,9 @@ module.exports = {
   Enrollment,
   GradeAppeal,
   GradeAuditLog,
+  Assessment,
+  AssessmentSubmission,
+  Announcement,
+  ElectiveRequest,
+  Material,
 };

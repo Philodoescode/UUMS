@@ -81,6 +81,11 @@ const getAllCourses = async (req, res) => {
       include: [
         { model: Department, as: 'department' },
         { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+        {
+          model: Instructor,
+          as: 'instructors',
+          include: [{ model: User, as: 'user', attributes: ['fullName'] }]
+        },
       ],
       order: [['courseCode', 'ASC']],
     });

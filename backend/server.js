@@ -14,6 +14,11 @@ const instructorRoutes = require('./routes/instructorRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const appealRoutes = require('./routes/appealRoutes');
 const instructorPortalRoutes = require('./routes/instructorPortalRoutes');
+const assessmentRoutes = require('./routes/assessmentRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
+const electiveRequestRoutes = require('./routes/electiveRequestRoutes');
+const userRoutes = require('./routes/userRoutes');
+const materialRoutes = require('./routes/materialRoutes');
 
 const app = express();
 
@@ -35,6 +40,11 @@ app.use('/api/instructors', instructorRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/appeals', appealRoutes);
 app.use('/api/instructor-portal', instructorPortalRoutes);
+app.use('/api/assessments', assessmentRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/elective-requests', electiveRequestRoutes);
+app.use('/api/materials', materialRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 3000;
 

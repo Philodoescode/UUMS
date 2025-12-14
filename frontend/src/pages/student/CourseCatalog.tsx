@@ -39,6 +39,7 @@ const CourseCatalog = () => {
   const [selectedCourseType, setSelectedCourseType] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [requestLoading, setRequestLoading] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -71,6 +72,21 @@ const CourseCatalog = () => {
   const handleCourseClick = (course: Course) => {
     setSelectedCourse(course);
     setIsDetailOpen(true);
+  };
+
+  const handleRequestElective = async (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation(); // Prevent opening detail modal
+    if (!confirm("Are you sure you want to request this elective course?")) return;
+
+    setRequestLoading(courseId);
+    try {
+      await api.post('/elective-requests', { courseId });
+      alert("Request submitted successfully!");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to submit request.");
+    } finally {
+      setRequestLoading(null);
+    }
   };
 
   return (
@@ -159,11 +175,11 @@ const CourseCatalog = () => {
               </EmptyHeader>
               {(selectedDepartment !== "all" || selectedCourseType !== "all") && (
                 <EmptyContent>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setSelectedDepartment("all");
                       setSelectedCourseType("all");
-                    }} 
+                    }}
                     variant="outline"
                   >
                     Clear Filters
@@ -182,6 +198,8 @@ const CourseCatalog = () => {
                     key={course.id}
                     course={course}
                     onClick={handleCourseClick}
+                    onRequest={handleRequestElective}
+                    loadingRequest={requestLoading === course.id}
                   />
                 ))}
               </div>
