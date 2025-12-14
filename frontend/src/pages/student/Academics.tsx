@@ -94,6 +94,8 @@ const Academics = () => {
                 return "secondary";
             case "waitlisted":
                 return "outline";
+            case "pending":
+                return "secondary"; // or a custom variant if available
             default:
                 return "outline";
         }
@@ -107,6 +109,8 @@ const Academics = () => {
                 return "Completed";
             case "waitlisted":
                 return "Waitlisted";
+            case "pending":
+                return "Pending Approval";
             default:
                 return status;
         }
@@ -142,6 +146,7 @@ const Academics = () => {
                                 <SelectContent>
                                     <SelectItem value="all">All Courses</SelectItem>
                                     <SelectItem value="enrolled">Currently Enrolled</SelectItem>
+                                    <SelectItem value="pending">Pending Approval</SelectItem>
                                     <SelectItem value="completed">Completed</SelectItem>
                                     <SelectItem value="waitlisted">Waitlisted</SelectItem>
                                 </SelectContent>

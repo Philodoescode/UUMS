@@ -26,6 +26,13 @@ export interface Course {
     code: string;
     name: string;
   };
+  instructors?: {
+    id: string;
+    user: {
+      fullName: string;
+    };
+    isPrimary: boolean;
+  }[];
 }
 
 interface CourseCardProps {
@@ -47,10 +54,10 @@ export function CourseCard({ course, onEdit, onDelete }: CourseCardProps) {
               <Badge variant="outline">
                 {course.semester} {course.year}
               </Badge>
-              <Badge 
-                variant="outline" 
-                className={course.courseType === "Core" 
-                  ? "border-blue-500 text-blue-600 bg-blue-50" 
+              <Badge
+                variant="outline"
+                className={course.courseType === "Core"
+                  ? "border-blue-500 text-blue-600 bg-blue-50"
                   : "border-green-500 text-green-600 bg-green-50"
                 }
               >

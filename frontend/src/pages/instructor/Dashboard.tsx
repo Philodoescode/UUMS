@@ -1,41 +1,109 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import { INSTRUCTOR_LINKS } from "@/config/navLinks";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InstructorAssessmentList } from "@/components/InstructorAssessmentList";
+import { InstructorAnnouncements } from "@/components/InstructorAnnouncements";
+import { InstructorGradeAppeals } from "@/components/InstructorGradeAppeals";
+import InstructorMaterialManagement from "@/components/InstructorMaterialManagement";
+import api from "@/lib/api";
+import { BookOpenIcon, RefreshCwIcon } from "lucide-react";
 
-// A shared Welcome Card component can be extracted to a common components folder later
-const WelcomeCard = ({ title, roleColor }: { title: string; roleColor: string }) => {
+interface Course {
+  id: string;
+  courseCode: string;
+  name: string;
+  semester: string;
+  year: number;
+}
+
+const InstructorDashboard = () => {
   const { user } = useAuth();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await api.get("/instructor-portal/my-courses");
+        setCourses(response.data);
+      } catch (error) {
+        console.error("Failed to fetch courses", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   return (
-    <div className={`card bg-card shadow-xl rounded-lg p-8 w-full max-w-md border-t-4 ${roleColor}`}>
-      <h1 className="text-4xl font-bold mb-4">{title}</h1>
-      <div className="space-y-4">
-        <p className="text-xl">Welcome back, <span className="font-semibold">{user?.fullName}</span></p>
-        <div className="p-4 bg-muted rounded-md text-left text-sm">
-          <p><strong>Role:</strong> {user?.role}</p>
-          <p><strong>Email:</strong> {user?.email}</p>
-          <p><strong>User ID:</strong> {user?._id}</p>
+    <div className="flex flex-col min-h-screen">
+      <Navbar links={INSTRUCTOR_LINKS} />
+      <main className="flex-grow bg-background p-8">
+        <div className="container mx-auto max-w-6xl space-y-8">
+          {/* Welcome Section */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Instructor Dashboard</h1>
+              <p className="text-muted-foreground">Manage your courses and assessments</p>
+            </div>
+            <div className="text-right text-sm">
+              <p className="font-medium">{user?.fullName}</p>
+              <p className="text-muted-foreground">{user?.email}</p>
+            </div>
+          </div>
+
+          {/* Courses & Assessments Grid */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <RefreshCwIcon className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <BookOpenIcon className="size-12 mx-auto mb-4 opacity-50" />
+              <p>You are not assigned to any courses yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {courses.map(course => (
+                <Card key={course.id} className="flex flex-col h-full">
+                  <CardHeader className="bg-muted/30 pb-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{course.courseCode}</CardTitle>
+                        <CardDescription>{course.name}</CardDescription>
+                      </div>
+                      <span className="text-xs font-medium bg-background px-2 py-1 rounded border">
+                        {course.semester} {course.year}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-grow pt-6">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      Assessments
+                    </h3>
+                    <InstructorAssessmentList courseId={course.id} />
+
+                    <div className="my-6 border-t pt-6"></div>
+                    <InstructorMaterialManagement courseId={course.id} />
+
+                    <div className="my-6 border-t pt-6"></div>
+
+                    <InstructorAnnouncements courseId={course.id} />
+
+                    <div className="my-6 border-t pt-6"></div>
+
+                    <InstructorGradeAppeals courseId={course.id} />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-        <p className="text-muted-foreground text-xs pt-4">This is the main content area for the instructor dashboard. The navbar above is configured with instructor-specific links.</p>
-      </div>
+      </main>
     </div>
   );
 };
-
-// Main page content wrapper
-const PageContent = ({ children }: { children: React.ReactNode }) => (
-  <main className="flex-grow flex items-center justify-center bg-background p-4">
-    {children}
-  </main>
-);
-
-const InstructorDashboard = () => (
-  <div className="flex flex-col min-h-screen">
-    <Navbar links={INSTRUCTOR_LINKS} />
-    <PageContent>
-      <WelcomeCard title="Instructor Dashboard" roleColor="border-blue-500" />
-    </PageContent>
-  </div>
-);
 
 export default InstructorDashboard;

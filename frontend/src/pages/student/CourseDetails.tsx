@@ -28,6 +28,9 @@ import {
     ClockIcon,
     XCircleIcon,
 } from "lucide-react";
+import { AssessmentList } from "@/components/AssessmentList";
+import { StudentAnnouncements } from "@/components/StudentAnnouncements";
+import { StudentMaterialList } from "@/components/StudentMaterialList";
 import api from "@/lib/api";
 import { AxiosError } from "axios";
 
@@ -49,6 +52,13 @@ interface Course {
         code: string;
     };
     prerequisites?: Course[];
+    instructors?: {
+        id: string;
+        user: {
+            fullName: string;
+        };
+        isPrimary: boolean;
+    }[];
 }
 
 interface GradeInfo {
@@ -280,6 +290,8 @@ const CourseDetails = () => {
                         Back to Academics
                     </Button>
 
+                    <StudentAnnouncements courseId={courseId!} />
+
                     {/* Course Header Card */}
                     <Card className="mb-6">
                         <CardHeader>
@@ -304,6 +316,11 @@ const CourseDetails = () => {
                                     <BuildingIcon className="size-4" />
                                     {course.department.name}
                                 </CardDescription>
+                            )}
+                            {course.instructors && course.instructors.length > 0 && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Instructor(s): {course.instructors.map(i => i.user.fullName).join(", ")}
+                                </p>
                             )}
                         </CardHeader>
                         <CardContent>
@@ -416,8 +433,8 @@ const CourseDetails = () => {
                                                         {/* Appeal Message */}
                                                         {appealMessage && (
                                                             <div className={`flex items-center gap-2 p-3 rounded-lg mb-3 ${appealMessage.type === 'success'
-                                                                    ? 'bg-green-50 text-green-700 border border-green-200'
-                                                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                                                : 'bg-red-50 text-red-700 border border-red-200'
                                                                 }`}>
                                                                 {appealMessage.type === 'success' ? (
                                                                     <CheckCircleIcon className="size-4" />
@@ -617,6 +634,24 @@ const CourseDetails = () => {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Course Materials Section */}
+                    {courseId && (
+                        <div className="mb-6">
+                            <h2 className="text-xl font-bold mb-4">Course Materials</h2>
+                            <StudentMaterialList courseId={courseId} />
+                        </div>
+                    )}
+
+                    <Separator className="my-6" />
+
+                    {/* Assessments Section */}
+                    {courseId && (
+                        <div className="mb-6">
+                            <h2 className="text-xl font-bold mb-4">Assessments</h2>
+                            <AssessmentList courseId={courseId} />
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
