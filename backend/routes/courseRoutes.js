@@ -7,6 +7,8 @@ const {
   updateCourse,
   deleteCourse,
   getCourseInstructors,
+  aksdjflkjasdfas
+  dfaklsdjflkasdfj
   assignInstructor,
   removeInstructor,
 } = require('../controllers/courseController');
