@@ -32,6 +32,11 @@ const Enrollment = sequelize.define('Enrollment', {
     type: DataTypes.STRING(5),
     allowNull: true,
   },
+  feedback: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Instructor feedback for the student',
+  },
   enrolledAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

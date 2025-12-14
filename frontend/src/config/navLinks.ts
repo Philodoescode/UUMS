@@ -1,6 +1,6 @@
 export type NavLink = {
   href: string;
-  label:string;
+  label: string;
 };
 
 /**
@@ -12,23 +12,24 @@ export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/facilities", label: "Facilities Management" },
   { href: "/admin/curriculum", label: "Curriculum Management" },
+  { href: "/admin/instructors", label: "Instructor Assignment" },
   { href: "/admin/users", label: "User Management" },
   { href: "/admin/communications", label: "Communications" },
   { href: "/admin/reports", label: "System Reports" },
 ];
 
 /**
- * advisor/Advisor Navbar
- * This navbar is for a advisor member, likely a professor or advisor.
+ * Instructor Navbar
+ * This navbar is for an instructor member, likely a professor.
  * It's focused on tasks related to teaching, student management, and communication.
- * Note: A general advisor portal might have more HR-related links.
  */
-export const ADVISOR_LINKS: NavLink[] = [
-    { href: "/advisor/dashboard", label: "Dashboard" },
-    { href: "/advisor/my-courses", label: "My Courses" },
-    { href: "/advisor/my-students", label: "My Students" },
-    { href: "/advisor/calendar", label: "Calendar & Events" },
-    { href: "/advisor/communications", label: "Communications" },
+export const INSTRUCTOR_LINKS: NavLink[] = [
+  { href: "/instructor/dashboard", label: "Dashboard" },
+  { href: "/instructor/grades", label: "Grade Management" },
+  { href: "/instructor/my-courses", label: "My Courses" },
+  { href: "/instructor/my-students", label: "My Students" },
+  { href: "/instructor/calendar", label: "Calendar & Events" },
+  { href: "/instructor/communications", label: "Communications" },
 ];
 
 /**

@@ -105,6 +105,16 @@ const Course = sequelize.define('Course', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+  courseOutline: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Course outline/topics covered',
+  },
+  syllabusUrl: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL or path to downloadable syllabus file',
+  },
 }, {
   tableName: 'courses',
   timestamps: true,

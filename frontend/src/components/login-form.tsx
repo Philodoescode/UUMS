@@ -45,7 +45,7 @@ export function LoginForm({
 
       // Redirect based on role
       if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'advisor') navigate('/advisor');
+      else if (user.role === 'instructor') navigate('/instructor');
       else if (user.role === 'student') navigate('/student');
 
     } catch (err: any) {

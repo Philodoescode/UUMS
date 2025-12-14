@@ -12,6 +12,8 @@ const departmentRoutes = require('./routes/departmentRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const instructorRoutes = require('./routes/instructorRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const appealRoutes = require('./routes/appealRoutes');
+const instructorPortalRoutes = require('./routes/instructorPortalRoutes');
 
 const app = express();
 
@@ -22,7 +24,7 @@ app.use(cookieParser());
 // CORS Configuration (Allow frontend to send cookies)
 app.use(cors({
   origin: 'http://localhost:5173', // Vite default port
-  credentials: true, 
+  credentials: true,
 }));
 
 // Routes
@@ -31,6 +33,8 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/appeals', appealRoutes);
+app.use('/api/instructor-portal', instructorPortalRoutes);
 
 const PORT = process.env.PORT || 3000;
 

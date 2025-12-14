@@ -18,8 +18,8 @@ const createInstructor = async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
-    if (user.role.name !== 'advisor') {
-      return res.status(400).json({ message: 'User must have advisor role to be an instructor' });
+    if (user.role.name !== 'instructor') {
+      return res.status(400).json({ message: 'User must have instructor role to be an instructor' });
     }
 
     // Check department exists

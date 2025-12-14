@@ -4,9 +4,13 @@ import { AuthProvider } from "@/context/AuthContext"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AdminDashboard from "@/pages/admin/Dashboard"
 import CurriculumManagement from "@/pages/admin/CurriculumManagement"
-import AdvisorDashboard from "@/pages/advisor/Dashboard"
+import InstructorAssignment from "@/pages/admin/InstructorAssignment"
+import InstructorDashboard from "@/pages/instructor/Dashboard"
+import GradeManagement from "@/pages/instructor/GradeManagement"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
+import Academics from "@/pages/student/Academics"
+import CourseDetails from "@/pages/student/CourseDetails"
 import './App.css'
 
 function App() {
@@ -24,31 +28,33 @@ function App() {
           } />
 
           {/* Protected Routes */}
-          
+
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
-            {/* Add other admin routes here, e.g., /admin/users */}
+            <Route path="/admin/instructors" element={<InstructorAssignment />} />
           </Route>
 
-          {/* Advisor Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['advisor']} />}>
-            {/* Redirect /advisor to /advisor/dashboard */}
-            <Route path="/advisor" element={<Navigate to="/advisor/dashboard" replace />} />
-            <Route path="/advisor/dashboard" element={<AdvisorDashboard />} />
-            {/* Add other advisor routes here, e.g., /advisor/my-students */}
+          {/* Instructor Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['instructor']} />}>
+            {/* Redirect /instructor to /instructor/dashboard */}
+            <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
+            <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+            <Route path="/instructor/grades" element={<GradeManagement />} />
           </Route>
 
           {/* Student Routes */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-             {/* Redirect /student to /student/dashboard */}
+            {/* Redirect /student to /student/dashboard */}
             <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/catalog" element={<CourseCatalog />} />
-            {/* Add other student routes here, e.g., /student/academics */}
+            <Route path="/student/academics" element={<Academics />} />
+            <Route path="/student/academics/:courseId" element={<CourseDetails />} />
+            {/* Add other student routes here */}
           </Route>
 
           {/* Catch all */}
