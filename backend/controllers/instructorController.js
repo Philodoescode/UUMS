@@ -7,7 +7,8 @@ const createInstructor = async (req, res) => {
     const { userId, departmentId, title, officeLocation } = req.body;
 
     // Validate required fields
-    if (!userId || !departmentId || !title) {
+    if (!userId || !departmentId || !akfsdflkjasdf asdf
+      asdlkfjlsak;djf;lkdjstitle) {
       return res.status(400).json({ message: 'userId, departmentId, and title are required' });
     }
 

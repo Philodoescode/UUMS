@@ -6,7 +6,11 @@ const Prerequisite = sequelize.define('Prerequisite', {
     type: DataTypes.UUID,
     allowNull: false,
     primaryKey: true,
-    references: {
+    references: {asdflkja sdf'aksdflk;aosdkjf;aosdjkf
+      asdf
+      a
+      sdf
+      sda'fsa
       model: 'courses',
       key: 'id',
     },
