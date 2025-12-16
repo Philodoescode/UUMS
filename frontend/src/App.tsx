@@ -9,6 +9,7 @@ import InstructorAssignment from "@/pages/admin/InstructorAssignment"
 import StudentManagement from "@/pages/admin/StudentManagement"
 import FacilityManagement from "@/pages/admin/FacilityManagement"
 import FacilityCalendar from "@/pages/admin/FacilityCalendar"
+import AdmissionManagement from "@/pages/admin/AdmissionManagement"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -49,6 +50,7 @@ function App() {
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
             <Route path="/admin/students" element={<StudentManagement />} />
+            <Route path="/admin/admissions" element={<AdmissionManagement />} />
             <Route path="/admin/calendar" element={<FacilityCalendar />} />
           </Route>
 
