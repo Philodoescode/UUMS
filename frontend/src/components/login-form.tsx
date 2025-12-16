@@ -112,9 +112,9 @@ export function LoginForm({
         </Field>
         <Field>
           <FieldDescription className="text-center">
-            Don&apos;t have an account?{" "}
-            <a href="#" className="underline underline-offset-4">
-              Sign up
+            New Applicant?{" "}
+            <a href="/apply" className="underline underline-offset-4 font-medium text-primary">
+              Apply for Admission
             </a>
           </FieldDescription>
         </Field>
