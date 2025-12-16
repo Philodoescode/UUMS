@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-export default function CalendarMainView() {
+interface CalendarMainViewProps {
+  onRefreshReady?: (refreshFn: () => void) => void;
+}
+
+export default function CalendarMainView({ onRefreshReady }: CalendarMainViewProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,6 +122,13 @@ export default function CalendarMainView() {
     fetchBookings();
   }, [fetchBookings]);
 
+  // Pass the fetchBookings callback to parent for external refresh
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(fetchBookings);
+    }
+  }, [onRefreshReady, fetchBookings]);
+
   // Map bookings to CalendarEvents
   const events: CalendarEvent[] = bookings.map(b => ({
     id: b.id,
@@ -130,7 +141,7 @@ export default function CalendarMainView() {
     facilityId: b.facilityId,
     facilityName: b.facility?.name,
     courseCode: b.course?.courseCode,
-    bookedBy: b.bookedBy ? `${b.bookedBy.firstName} ${b.bookedBy.lastName}` : 'Unknown'
+    bookedBy: b.bookedBy ? b.bookedBy.fullName : 'Unknown'
   }));
 
   // Handle building change -> reset facility selection if not in building? 

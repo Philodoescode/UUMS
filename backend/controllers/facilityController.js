@@ -296,7 +296,7 @@ const getFacilityBookings = async (req, res) => {
         {
           model: User,
           as: 'bookedBy',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'fullName', 'email'],
         },
       ],
       order: [['startTime', 'ASC']],
@@ -309,6 +309,114 @@ const getFacilityBookings = async (req, res) => {
   }
 };
 
+// @desc    Create a new booking with conflict detection
+// @route   POST /api/facilities/book
+const createBooking = async (req, res) => {
+  try {
+    const { facilityId, startTime, endTime, title, description, courseId } = req.body;
+    const bookedById = req.user.id;
+
+    // Validate required fields
+    if (!facilityId || !startTime || !endTime || !title) {
+      return res.status(400).json({
+        message: 'facilityId, startTime, endTime, and title are required',
+      });
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    // Validate time range
+    if (start >= end) {
+      return res.status(400).json({
+        message: 'startTime must be before endTime',
+      });
+    }
+
+    // Verify facility exists and is Active
+    const facility = await Facility.findByPk(facilityId);
+    if (!facility || !facility.isActive) {
+      return res.status(404).json({ message: 'Facility not found' });
+    }
+
+    if (facility.status === 'Maintenance') {
+      return res.status(400).json({
+        message: 'Cannot book a facility that is under maintenance',
+      });
+    }
+
+    // Verify courseId if provided
+    if (courseId) {
+      const course = await Course.findByPk(courseId);
+      if (!course) {
+        return res.status(404).json({ message: 'Course not found' });
+      }
+    }
+
+    // Check for overlapping bookings
+    // Overlap formula: Existing_Start < Requested_End AND Existing_End > Requested_Start
+    const conflictingBooking = await Booking.findOne({
+      where: {
+        facilityId,
+        [Op.and]: [
+          { startTime: { [Op.lt]: end } },
+          { endTime: { [Op.gt]: start } },
+        ],
+      },
+    });
+
+    if (conflictingBooking) {
+      return res.status(409).json({
+        message: 'Facility is already booked for this time slot',
+        conflict: {
+          startTime: conflictingBooking.startTime,
+          endTime: conflictingBooking.endTime,
+          title: conflictingBooking.title,
+        },
+      });
+    }
+
+    // Create the booking
+    const booking = await Booking.create({
+      facilityId,
+      startTime: start,
+      endTime: end,
+      title,
+      description: description || null,
+      courseId: courseId || null,
+      bookedById,
+    });
+
+    // Fetch the booking with relations for response
+    const createdBooking = await Booking.findByPk(booking.id, {
+      include: [
+        {
+          model: Facility,
+          as: 'facility',
+        },
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['id', 'courseCode', 'name'],
+        },
+        {
+          model: User,
+          as: 'bookedBy',
+          attributes: ['id', 'fullName', 'email'],
+        },
+      ],
+    });
+
+    res.status(201).json(createdBooking);
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ message: error.errors[0].message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createFacility,
   getAllFacilities,
@@ -317,4 +425,5 @@ module.exports = {
   deleteFacility,
   updateFacilityStatus,
   getFacilityBookings,
+  createBooking,
 };
