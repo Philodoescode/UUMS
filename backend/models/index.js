@@ -19,6 +19,8 @@ const Facility = require('./facilityModel');
 const MaintenanceRequest = require('./maintenanceRequestModel');
 const Booking = require('./bookingModel');
 const AdmissionApplication = require('./admissionApplicationModel');
+const Asset = require('./assetModel');
+const AssetAllocationLog = require('./assetAllocationLogModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -145,6 +147,17 @@ Booking.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 User.hasMany(Booking, { foreignKey: 'bookedById', as: 'bookings' });
 Booking.belongsTo(User, { foreignKey: 'bookedById', as: 'bookedBy' });
 
+// ===== Asset Associations =====
+Asset.belongsTo(User, { foreignKey: 'currentHolderId', as: 'currentHolder' });
+User.hasMany(Asset, { foreignKey: 'currentHolderId', as: 'heldAssets' });
+
+// ===== Asset Allocation Log Associations =====
+Asset.hasMany(AssetAllocationLog, { foreignKey: 'assetId', as: 'allocationHistory' });
+AssetAllocationLog.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
+
+AssetAllocationLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+AssetAllocationLog.belongsTo(User, { foreignKey: 'performedById', as: 'performedBy' });
+
 module.exports = {
   sequelize,
   User,
@@ -166,4 +179,6 @@ module.exports = {
   MaintenanceRequest,
   Booking,
   AdmissionApplication,
+  Asset,
+  AssetAllocationLog,
 };
