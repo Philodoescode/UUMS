@@ -45,11 +45,20 @@ const createFacility = async (req, res) => {
 
     res.status(201).json(facility);
   } catch (error) {
-    console.error('Error creating facility:', error);
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({ message: error.errors[0].message });
+    console.error('Error creating facility:', error); // Check your server logs for this detailed error!
+
+    // Catch both validation and unique constraint errors
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+      const messages = error.errors.map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
     }
-    res.status(500).json({ message: 'Server error' });
+
+    // For any other server error, provide more detail in development
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Server error' 
+      : `Server Error: ${error.message} (Type: ${error.name})`;
+
+    res.status(500).json({ message: errorMessage });
   }
 };
 

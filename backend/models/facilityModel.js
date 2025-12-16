@@ -31,9 +31,6 @@ const Facility = sequelize.define('Facility', {
         args: [2, 20],
         msg: 'Facility code must be 2-20 characters',
       },
-      isUppercase: {
-        msg: 'Facility code must be uppercase',
-      },
     },
   },
   type: {
@@ -77,7 +74,7 @@ const Facility = sequelize.define('Facility', {
     allowNull: true,
   },
   floor: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(50),
     allowNull: true,
   },
   building: {
