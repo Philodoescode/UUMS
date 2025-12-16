@@ -141,7 +141,7 @@ export default function CalendarMainView({ onRefreshReady }: CalendarMainViewPro
     facilityId: b.facilityId,
     facilityName: b.facility?.name,
     courseCode: b.course?.courseCode,
-    bookedBy: b.bookedBy ? `${b.bookedBy.firstName} ${b.bookedBy.lastName}` : 'Unknown'
+    bookedBy: b.bookedBy ? b.bookedBy.fullName : 'Unknown'
   }));
 
   // Handle building change -> reset facility selection if not in building? 

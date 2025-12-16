@@ -296,7 +296,7 @@ const getFacilityBookings = async (req, res) => {
         {
           model: User,
           as: 'bookedBy',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'fullName', 'email'],
         },
       ],
       order: [['startTime', 'ASC']],
@@ -402,7 +402,7 @@ const createBooking = async (req, res) => {
         {
           model: User,
           as: 'bookedBy',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'fullName', 'email'],
         },
       ],
     });
