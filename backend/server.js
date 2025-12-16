@@ -20,6 +20,7 @@ const electiveRequestRoutes = require('./routes/electiveRequestRoutes');
 const userRoutes = require('./routes/userRoutes');
 const materialRoutes = require('./routes/materialRoutes');
 const facilityRoutes = require('./routes/facilityRoutes');
+const applicationRoutes = require('./routes/applicationRoutes');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/elective-requests', electiveRequestRoutes);
 app.use('/api/materials', materialRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/applications', applicationRoutes);
 
 const PORT = process.env.PORT || 3000;
 
