@@ -127,8 +127,6 @@ User.hasMany(User, { foreignKey: 'advisorId', as: 'advisees' });
 Course.hasMany(Material, { foreignKey: 'courseId', as: 'materials' });
 Material.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
-Material.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
-
 // ===== Booking Associations =====
 Facility.hasMany(Booking, { foreignKey: 'facilityId', as: 'bookings' });
 Booking.belongsTo(Facility, { foreignKey: 'facilityId', as: 'facility' });

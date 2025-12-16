@@ -52,6 +52,11 @@ export interface EventCalendarProps {
   onEventDelete?: (eventId: string) => void;
   className?: string;
   initialView?: CalendarView;
+  currentDate?: Date;
+  view?: CalendarView;
+  onNavigate?: (date: Date) => void;
+  onViewChange?: (view: CalendarView) => void;
+  readOnly?: boolean;
 }
 
 export function EventCalendar({
@@ -61,13 +66,31 @@ export function EventCalendar({
   onEventDelete,
   className,
   initialView = "month",
+  currentDate: propCurrentDate,
+  view: propView,
+  onNavigate,
+  onViewChange,
+  readOnly = false,
 }: EventCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalendarView>(initialView);
+  const [currentDateState, setCurrentDateState] = useState(new Date());
+  const [viewState, setViewState] = useState<CalendarView>(initialView);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
+
+  const currentDate = propCurrentDate ?? currentDateState;
+  const view = propView ?? viewState;
+
+  const setCurrentDate = (date: Date) => {
+    setCurrentDateState(date);
+    onNavigate?.(date);
+  };
+
+  const setView = (v: CalendarView) => {
+    setViewState(v);
+    onViewChange?.(v);
+  };
 
   // Add keyboard shortcuts for view switching
   useEffect(() => {
@@ -104,7 +127,7 @@ export function EventCalendar({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isEventDialogOpen]);
+  }, [isEventDialogOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePrevious = () => {
     if (view === "month") {
@@ -143,6 +166,7 @@ export function EventCalendar({
   };
 
   const handleEventCreate = (startTime: Date) => {
+    if (readOnly) return;
     console.log("Creating new event at:", startTime); // Debug log
 
     // Snap to 15-minute intervals
@@ -348,11 +372,13 @@ export function EventCalendar({
             </DropdownMenu>
             <Button
               className="max-[479px]:aspect-square max-[479px]:p-0!"
+              disabled={readOnly}
               onClick={() => {
                 setSelectedEvent(null); // Ensure we're creating a new event
                 setIsEventDialogOpen(true);
               }}
               size="sm"
+              style={{ display: readOnly ? "none" : undefined }}
             >
               <PlusIcon
                 aria-hidden="true"
@@ -407,6 +433,7 @@ export function EventCalendar({
           }}
           onDelete={handleEventDelete}
           onSave={handleEventSave}
+          readOnly={readOnly}
         />
       </CalendarDndProvider>
     </div>

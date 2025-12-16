@@ -46,6 +46,7 @@ interface EventDialogProps {
   onClose: () => void;
   onSave: (event: CalendarEvent) => void;
   onDelete: (eventId: string) => void;
+  readOnly?: boolean;
 }
 
 export function EventDialog({
@@ -54,6 +55,7 @@ export function EventDialog({
   onClose,
   onSave,
   onDelete,
+  readOnly = false,
 }: EventDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -235,19 +237,73 @@ export function EventDialog({
     <Dialog onOpenChange={(open) => !open && onClose()} open={isOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{event?.id ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogTitle>
+            {readOnly ? "Event Details" : (event?.id ? "Edit Event" : "Create Event")}
+          </DialogTitle>
           <DialogDescription className="sr-only">
             {event?.id
               ? "Edit the details of this event"
               : "Add a new event to your calendar"}
           </DialogDescription>
         </DialogHeader>
+        {readOnly ? (
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label className="text-muted-foreground">Title</Label>
+                <div className="font-medium">{title || "(No Title)"}</div>
+              </div>
+              
+              {description && (
+                <div>
+                  <Label className="text-muted-foreground">Description</Label>
+                  <div className="whitespace-pre-wrap">{description}</div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label className="text-muted-foreground">Start</Label>
+                    <div>{startDate ? format(startDate, "PPP") : ""} {allDay ? "(All Day)" : startTime}</div>
+                </div>
+                <div>
+                    <Label className="text-muted-foreground">End</Label>
+                    <div>{endDate ? format(endDate, "PPP") : ""} {allDay ? "" : endTime}</div>
+                </div>
+              </div>
+
+              {location && (
+                <div>
+                  <Label className="text-muted-foreground">Location</Label>
+                  <div>{location}</div>
+                </div>
+              )}
+
+              {event?.bookedBy && (
+                 <div>
+                    <Label className="text-muted-foreground">Booked By</Label>
+                    <div>{event.bookedBy}</div>
+                 </div>
+              )}
+              {event?.courseCode && (
+                 <div>
+                    <Label className="text-muted-foreground">Course</Label>
+                    <div>{event.courseCode}</div>
+                 </div>
+              )}
+               {event?.facilityName && (
+                 <div>
+                    <Label className="text-muted-foreground">Facility</Label>
+                    <div>{event.facilityName}</div>
+                 </div>
+              )}
+            </div>
+        ) : (
+        <div className="grid gap-4 py-4">
         {error && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-destructive text-sm">
             {error}
           </div>
         )}
-        <div className="grid gap-4 py-4">
           <div className="*:not-first:mt-1.5">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -443,8 +499,9 @@ export function EventDialog({
             </RadioGroup>
           </fieldset>
         </div>
+        )}
         <DialogFooter className="flex-row sm:justify-between">
-          {event?.id && (
+          {!readOnly && event?.id && (
             <Button
               aria-label="Delete event"
               onClick={handleDelete}
@@ -455,10 +512,10 @@ export function EventDialog({
             </Button>
           )}
           <div className="flex flex-1 justify-end gap-2">
-            <Button onClick={onClose} variant="outline">
-              Cancel
+            <Button onClick={onClose} variant={readOnly ? "default" : "outline"}>
+              {readOnly ? "Close" : "Cancel"}
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            {!readOnly && <Button onClick={handleSave}>Save</Button>}
           </div>
         </DialogFooter>
       </DialogContent>
