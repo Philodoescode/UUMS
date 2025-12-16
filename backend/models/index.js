@@ -15,6 +15,7 @@ const AssessmentSubmission = require('./assessmentSubmissionModel');
 const Announcement = require('./announcementModel');
 const ElectiveRequest = require('./electiveRequestModel');
 const Material = require('./materialModel');
+const Facility = require('./facilityModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -142,4 +143,5 @@ module.exports = {
   Announcement,
   ElectiveRequest,
   Material,
+  Facility,
 };
