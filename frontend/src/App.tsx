@@ -6,6 +6,7 @@ import AdminDashboard from "@/pages/admin/Dashboard"
 import CurriculumManagement from "@/pages/admin/CurriculumManagement"
 import InstructorAssignment from "@/pages/admin/InstructorAssignment"
 import StudentManagement from "@/pages/admin/StudentManagement"
+import FacilityManagement from "@/pages/admin/FacilityManagement"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -39,6 +40,7 @@ function App() {
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/facilities" element={<FacilityManagement />} />
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
             <Route path="/admin/students" element={<StudentManagement />} />
