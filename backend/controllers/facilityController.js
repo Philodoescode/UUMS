@@ -1,4 +1,4 @@
-const { Facility } = require('../models');
+const { Facility, Booking, Course, User } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Create a new facility
@@ -45,11 +45,20 @@ const createFacility = async (req, res) => {
 
     res.status(201).json(facility);
   } catch (error) {
-    console.error('Error creating facility:', error);
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({ message: error.errors[0].message });
+    console.error('Error creating facility:', error); // Check your server logs for this detailed error!
+
+    // Catch both validation and unique constraint errors
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+      const messages = error.errors.map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
     }
-    res.status(500).json({ message: 'Server error' });
+
+    // For any other server error, provide more detail in development
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Server error' 
+      : `Server Error: ${error.message} (Type: ${error.name})`;
+
+    res.status(500).json({ message: errorMessage });
   }
 };
 
@@ -234,6 +243,72 @@ const updateFacilityStatus = async (req, res) => {
   }
 };
 
+
+// @desc    Get facility bookings
+// @route   GET /api/facilities/bookings
+const getFacilityBookings = async (req, res) => {
+  try {
+    const { startDate, endDate, facilityId, building } = req.query;
+
+    const where = {};
+    if (facilityId) where.facilityId = facilityId;
+    
+    // Date range filter
+    if (startDate || endDate) {
+      where.startTime = {};
+      if (startDate) where.startTime[Op.gte] = new Date(startDate);
+      // If we only have endDate, it's <= endDate.
+      // Usually we want overlapping: startTime < queryEnd AND endTime > queryStart
+      // But for simple "view bookings in range", we can check if the booking starts within the range.
+      // Let's implement overlapping logic if both are present range:
+      // Booking overlaps if Booking.start < Range.End AND Booking.end > Range.Start
+      if (startDate && endDate) {
+        // We want bookings that overlap with the requested window
+        where[Op.and] = [
+          { startTime: { [Op.lt]: new Date(endDate) } },
+          { endTime: { [Op.gt]: new Date(startDate) } },
+        ];
+        // Clean up direct assignments if doing overlap
+        delete where.startTime;
+      }
+    }
+
+    // Include Facility to filter by building
+    const facilityInclude = {
+      model: Facility,
+      as: 'facility',
+      where: {}, 
+    };
+
+    if (building) {
+      facilityInclude.where.building = building;
+    }
+
+    const bookings = await Booking.findAll({
+      where,
+      include: [
+        facilityInclude,
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['id', 'courseCode', 'name'],
+        },
+        {
+          model: User,
+          as: 'bookedBy',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+        },
+      ],
+      order: [['startTime', 'ASC']],
+    });
+
+    res.json(bookings);
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createFacility,
   getAllFacilities,
@@ -241,4 +316,5 @@ module.exports = {
   updateFacility,
   deleteFacility,
   updateFacilityStatus,
+  getFacilityBookings,
 };

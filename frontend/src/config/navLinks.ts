@@ -11,6 +11,7 @@ export type NavLink = {
 export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/facilities", label: "Facilities Management" },
+  { href: "/admin/calendar", label: "Facility Calendar" },
   { href: "/admin/curriculum", label: "Curriculum Management" },
   { href: "/admin/instructors", label: "Instructor Assignment" },
   { href: "/admin/students", label: "Student Management" },
