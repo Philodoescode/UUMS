@@ -17,6 +17,8 @@ import CourseDetails from "@/pages/student/CourseDetails"
 import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
+import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
+import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import './App.css'
 
 function App() {
@@ -40,6 +42,7 @@ function App() {
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/maintenance" element={<MaintenanceRequests />} />
             <Route path="/admin/facilities" element={<FacilityManagement />} />
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
@@ -51,6 +54,7 @@ function App() {
             {/* Redirect /instructor to /instructor/dashboard */}
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+            <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
           </Route>
 
