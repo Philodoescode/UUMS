@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { LoginForm } from "@/components/login-form"
+import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/AuthContext"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AdminDashboard from "@/pages/admin/Dashboard"
@@ -17,6 +18,7 @@ import Academics from "@/pages/student/Academics"
 import CourseDetails from "@/pages/student/CourseDetails"
 import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
+import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import './App.css'
 
@@ -33,6 +35,8 @@ function App() {
               </div>
             </div>
           } />
+
+          <Route path="/apply" element={<AdmissionApplication />} />
 
           {/* Protected Routes */}
 
@@ -79,6 +83,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster />
     </AuthProvider>
   )
 }
