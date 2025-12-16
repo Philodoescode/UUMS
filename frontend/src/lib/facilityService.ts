@@ -91,3 +91,46 @@ export const updateFacilityStatus = async (
   );
   return response.data;
 };
+
+// ========================
+// Booking Types & Methods
+// ========================
+
+export interface BookingRequest {
+  facilityId: string;
+  startTime: string; // ISO string
+  endTime: string;   // ISO string
+  title: string;
+  description?: string;
+  courseId?: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  facilityId: string;
+  courseId?: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  bookedById: string;
+  facility: Facility;
+  course?: {
+    id: string;
+    courseCode: string;
+    name: string;
+  };
+  bookedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export const createBooking = async (data: BookingRequest): Promise<BookingResponse> => {
+  const response = await axios.post(`${API_BASE_URL}/api/facilities/book`, data, {
+    withCredentials: true,
+  });
+  return response.data;
+};

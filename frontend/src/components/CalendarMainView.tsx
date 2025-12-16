@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-export default function CalendarMainView() {
+interface CalendarMainViewProps {
+  onRefreshReady?: (refreshFn: () => void) => void;
+}
+
+export default function CalendarMainView({ onRefreshReady }: CalendarMainViewProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,6 +121,13 @@ export default function CalendarMainView() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  // Pass the fetchBookings callback to parent for external refresh
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(fetchBookings);
+    }
+  }, [onRefreshReady, fetchBookings]);
 
   // Map bookings to CalendarEvents
   const events: CalendarEvent[] = bookings.map(b => ({
