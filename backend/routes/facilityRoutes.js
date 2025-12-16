@@ -7,11 +7,15 @@ const {
   updateFacility,
   deleteFacility,
   updateFacilityStatus,
+  getFacilityBookings,
 } = require('../controllers/facilityController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 // All routes require authentication
 router.use(protect);
+
+// GET routes - accessible to all authenticated users
+router.get('/bookings', getFacilityBookings);
 
 // GET routes - accessible to all authenticated users
 router.get('/', getAllFacilities);

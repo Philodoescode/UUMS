@@ -17,6 +17,8 @@ const ElectiveRequest = require('./electiveRequestModel');
 const Material = require('./materialModel');
 const Facility = require('./facilityModel');
 const MaintenanceRequest = require('./maintenanceRequestModel');
+const Booking = require('./bookingModel');
+const AdmissionApplication = require('./admissionApplicationModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -133,6 +135,15 @@ MaintenanceRequest.belongsTo(Facility, { foreignKey: 'facilityId' });
 
 User.hasMany(MaintenanceRequest, { foreignKey: 'reportedById', as: 'reportedMaintenanceRequests' });
 MaintenanceRequest.belongsTo(User, { foreignKey: 'reportedById', as: 'reportedBy' });
+// ===== Booking Associations =====
+Facility.hasMany(Booking, { foreignKey: 'facilityId', as: 'bookings' });
+Booking.belongsTo(Facility, { foreignKey: 'facilityId', as: 'facility' });
+
+Course.hasMany(Booking, { foreignKey: 'courseId', as: 'bookings' });
+Booking.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+User.hasMany(Booking, { foreignKey: 'bookedById', as: 'bookings' });
+Booking.belongsTo(User, { foreignKey: 'bookedById', as: 'bookedBy' });
 
 module.exports = {
   sequelize,
@@ -153,4 +164,6 @@ module.exports = {
   Material,
   Facility,
   MaintenanceRequest,
+  Booking,
+  AdmissionApplication,
 };

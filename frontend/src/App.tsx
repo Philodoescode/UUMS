@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { LoginForm } from "@/components/login-form"
+import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/AuthContext"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AdminDashboard from "@/pages/admin/Dashboard"
@@ -7,6 +8,7 @@ import CurriculumManagement from "@/pages/admin/CurriculumManagement"
 import InstructorAssignment from "@/pages/admin/InstructorAssignment"
 import StudentManagement from "@/pages/admin/StudentManagement"
 import FacilityManagement from "@/pages/admin/FacilityManagement"
+import FacilityCalendar from "@/pages/admin/FacilityCalendar"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -16,6 +18,7 @@ import Academics from "@/pages/student/Academics"
 import CourseDetails from "@/pages/student/CourseDetails"
 import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
+import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
@@ -35,6 +38,8 @@ function App() {
             </div>
           } />
 
+          <Route path="/apply" element={<AdmissionApplication />} />
+
           {/* Protected Routes */}
 
           {/* Admin Routes */}
@@ -47,6 +52,7 @@ function App() {
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
             <Route path="/admin/students" element={<StudentManagement />} />
+            <Route path="/admin/calendar" element={<FacilityCalendar />} />
           </Route>
 
           {/* Instructor Routes */}
@@ -81,6 +87,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster />
     </AuthProvider>
   )
 }
