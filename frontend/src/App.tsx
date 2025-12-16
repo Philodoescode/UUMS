@@ -23,6 +23,7 @@ import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // A
 import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
+import AssetDetails from "@/pages/admin/AssetDetails";
 import './App.css'
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
             <Route path="/admin/students" element={<StudentManagement />} />
             <Route path="/admin/assets" element={<AssetManagement />} />
+            <Route path="/admin/assets/:id" element={<AssetDetails />} />
             <Route path="/admin/calendar" element={<FacilityCalendar />} />
           </Route>
 
