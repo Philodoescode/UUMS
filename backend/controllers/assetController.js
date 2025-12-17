@@ -41,8 +41,10 @@ const getAssetById = async (req, res) => {
                         { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] },
                         { model: User, as: 'performedBy', attributes: ['id', 'fullName', 'email'] }
                     ],
-                    order: [['createdAt', 'DESC']],
                 }
+            ],
+            order: [
+                [{ model: AssetAllocationLog, as: 'allocationHistory' }, 'createdAt', 'DESC']
             ],
         });
 
@@ -137,6 +139,10 @@ const checkoutAsset = async (req, res) => {
             return res.status(400).json({ message: 'Asset is already checked out' });
         }
 
+        if (asset.status === 'maintenance') {
+            return res.status(400).json({ message: 'Cannot checkout an asset that is in maintenance' });
+        }
+
         if (asset.status === 'retired') {
             return res.status(400).json({ message: 'Cannot checkout a retired asset' });
         }
@@ -191,6 +197,14 @@ const returnAsset = async (req, res) => {
         }
 
         const previousHolderId = asset.currentHolderId;
+
+        // Verify the previous holder exists before creating log
+        if (previousHolderId) {
+            const previousHolder = await User.findByPk(previousHolderId);
+            if (!previousHolder) {
+                return res.status(400).json({ message: 'Previous holder user not found' });
+            }
+        }
 
         // Update asset
         await asset.update({
