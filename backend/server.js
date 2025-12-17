@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { connectDB } = require('./config/db');
@@ -21,6 +22,7 @@ const userRoutes = require('./routes/userRoutes');
 const materialRoutes = require('./routes/materialRoutes');
 const facilityRoutes = require('./routes/facilityRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const studentDocumentRoutes = require('./routes/studentDocumentRoutes');
 
 const app = express();
 
@@ -33,6 +35,9 @@ app.use(cors({
   origin: 'http://localhost:5173', // Vite default port
   credentials: true,
 }));
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -49,6 +54,7 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/student-documents', studentDocumentRoutes);
 
 const PORT = process.env.PORT || 3000;
 

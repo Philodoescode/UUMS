@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { StudentDocumentsDialog } from "@/components/admin/StudentDocumentsDialog";
 
 interface User {
     id: string;
@@ -99,21 +100,24 @@ const StudentManagement = () => {
                                                 {student.advisor ? student.advisor.fullName : <span className="text-muted-foreground italic">None</span>}
                                             </TableCell>
                                             <TableCell>
-                                                <Select
-                                                    onValueChange={(val) => handleAssignAdvisor(student.id, val)}
-                                                    defaultValue={student.advisor?.id}
-                                                >
-                                                    <SelectTrigger className="w-[200px]">
-                                                        <SelectValue placeholder="Select Advisor" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {advisors.map(adv => (
-                                                            <SelectItem key={adv.id} value={adv.id}>
-                                                                {adv.fullName}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <div className="flex items-center gap-2">
+                                                    <Select
+                                                        onValueChange={(val) => handleAssignAdvisor(student.id, val)}
+                                                        defaultValue={student.advisor?.id}
+                                                    >
+                                                        <SelectTrigger className="w-[200px]">
+                                                            <SelectValue placeholder="Select Advisor" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {advisors.map(adv => (
+                                                                <SelectItem key={adv.id} value={adv.id}>
+                                                                    {adv.fullName}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <StudentDocumentsDialog student={student} />
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
