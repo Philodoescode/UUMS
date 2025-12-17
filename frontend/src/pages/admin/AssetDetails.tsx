@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -41,7 +41,7 @@ const AssetDetails = () => {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    const fetchAsset = async () => {
+    const fetchAsset = useCallback(async () => {
         if (!id) return;
         setLoading(true);
         try {
@@ -56,11 +56,11 @@ const AssetDetails = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, toast]);
 
     useEffect(() => {
         fetchAsset();
-    }, [id]);
+    }, [fetchAsset]);
 
     const handleReturn = async () => {
         if (!asset) return;

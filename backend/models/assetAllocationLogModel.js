@@ -22,7 +22,7 @@ const AssetAllocationLog = sequelize.define('AssetAllocationLog', {
             model: 'users',
             key: 'id',
         },
-        comment: 'The user who received or returned the asset',
+        comment: 'The user associated with this action (received on checkout, returned on return)',
     },
     action: {
         type: DataTypes.ENUM('checked_out', 'returned'),
