@@ -21,6 +21,7 @@ const electiveRequestRoutes = require('./routes/electiveRequestRoutes');
 const userRoutes = require('./routes/userRoutes');
 const materialRoutes = require('./routes/materialRoutes');
 const facilityRoutes = require('./routes/facilityRoutes');
+const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
 const studentDocumentRoutes = require('./routes/studentDocumentRoutes');
 
@@ -53,6 +54,7 @@ app.use('/api/elective-requests', electiveRequestRoutes);
 app.use('/api/materials', materialRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/student-documents', studentDocumentRoutes);
 

@@ -16,6 +16,7 @@ const Announcement = require('./announcementModel');
 const ElectiveRequest = require('./electiveRequestModel');
 const Material = require('./materialModel');
 const Facility = require('./facilityModel');
+const MaintenanceRequest = require('./maintenanceRequestModel');
 const Booking = require('./bookingModel');
 const AdmissionApplication = require('./admissionApplicationModel');
 const StudentDocument = require('./studentDocumentModel');
@@ -129,6 +130,12 @@ User.hasMany(User, { foreignKey: 'advisorId', as: 'advisees' });
 Course.hasMany(Material, { foreignKey: 'courseId', as: 'materials' });
 Material.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
+// ===== Maintenance Request Associations =====
+Facility.hasMany(MaintenanceRequest, { foreignKey: 'facilityId', as: 'maintenanceRequests' });
+MaintenanceRequest.belongsTo(Facility, { foreignKey: 'facilityId' });
+
+User.hasMany(MaintenanceRequest, { foreignKey: 'reportedById', as: 'reportedMaintenanceRequests' });
+MaintenanceRequest.belongsTo(User, { foreignKey: 'reportedById', as: 'reportedBy' });
 // ===== Booking Associations =====
 Facility.hasMany(Booking, { foreignKey: 'facilityId', as: 'bookings' });
 Booking.belongsTo(Facility, { foreignKey: 'facilityId', as: 'facility' });
@@ -164,6 +171,7 @@ module.exports = {
   ElectiveRequest,
   Material,
   Facility,
+  MaintenanceRequest,
   Booking,
   AdmissionApplication,
   StudentDocument,
