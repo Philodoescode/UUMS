@@ -21,6 +21,7 @@ import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
+import TADashboard from "@/pages/ta/Dashboard";
 import './App.css'
 
 function App() {
@@ -60,6 +61,12 @@ function App() {
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
+          </Route>
+
+          {/* TA Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
+            <Route path="/ta" element={<Navigate to="/ta/dashboard" replace />} />
+            <Route path="/ta/dashboard" element={<TADashboard />} />
           </Route>
 
           {/* Advisor Routes */}

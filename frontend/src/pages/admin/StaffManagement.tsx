@@ -50,7 +50,7 @@ const StaffManagement = () => {
     // Form State
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState("TA");
+    const [role, setRole] = useState("ta");
 
     const { toast } = useToast();
 
@@ -65,9 +65,16 @@ const StaffManagement = () => {
             // Optimally backend should filter, but for now we filter client side as per established pattern.
             const response = await api.get('/users');
             const data = response.data;
-            const staffMembers = data.filter((u: any) =>
-                u.role?.name === 'TA' || u.role?.name === 'Instructor' || u.role === 'TA' || u.role === 'Instructor'
-            );
+            console.log('Raw users data:', data);
+
+            const staffMembers = data.filter((u: any) => {
+                const roleName = u.role?.name || u.role;
+                const normalizedRole = String(roleName).toLowerCase().trim();
+                console.log(`User ${u.email} role:`, roleName, 'Normalized:', normalizedRole);
+                return ['ta', 'instructor'].includes(normalizedRole);
+            });
+
+            console.log('Filtered staff:', staffMembers);
             setStaff(staffMembers);
         } catch (error) {
             console.error("Failed to fetch staff", error);
@@ -115,7 +122,7 @@ const StaffManagement = () => {
     const resetForm = () => {
         setFullName("");
         setEmail("");
-        setRole("TA");
+        setRole("ta");
     };
 
     return (
@@ -179,8 +186,8 @@ const StaffManagement = () => {
                                                         <SelectValue placeholder="Select role" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="TA">Teaching Assistant (TA)</SelectItem>
-                                                        <SelectItem value="Instructor">Instructor</SelectItem>
+                                                        <SelectItem value="ta">Teaching Assistant (TA)</SelectItem>
+                                                        <SelectItem value="instructor">Instructor</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -223,9 +230,9 @@ const StaffManagement = () => {
                                                 <TableCell>{user.email}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={
-                                                        (user.role?.name || user.roleName) === 'Instructor' ? "default" : "secondary"
+                                                        (typeof user.role === 'string' ? user.role : user.role?.name) === 'Instructor' ? "default" : "secondary"
                                                     }>
-                                                        {user.role?.name || user.roleName || user.role}
+                                                        {typeof user.role === 'string' ? user.role : user.role?.name || user.roleName}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>

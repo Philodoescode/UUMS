@@ -43,9 +43,9 @@ export function LoginForm({
       // Update context
       login(user);
 
-      // Redirect based on role
       if (user.role === 'admin') navigate('/admin');
       else if (user.role === 'instructor') navigate('/instructor');
+      else if (user.role === 'ta') navigate('/ta');
       else if (user.role === 'student') navigate('/student');
       else if (user.role === 'advisor') navigate('/advisor');
 

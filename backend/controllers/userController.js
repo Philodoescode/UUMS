@@ -19,7 +19,8 @@ const createUser = async (req, res) => {
         }
 
         // Validate Role (TA or Instructor)
-        const roleDoc = await Role.findOne({ where: { name: role } });
+        const roleLower = role.toLowerCase();
+        const roleDoc = await Role.findOne({ where: { name: roleLower } });
         if (!roleDoc) {
             return res.status(400).json({ message: 'Invalid role' });
         }
@@ -34,13 +35,13 @@ const createUser = async (req, res) => {
         }
 
         // Strict requirement: "The Admin must select the appropriate Role (either "TA" or "Instructor")"
-        if (!['TA', 'Instructor'].includes(role)) {
+        if (!['ta', 'instructor'].includes(roleLower)) {
             return res.status(400).json({ message: 'Role must be either TA or Instructor' });
         }
 
         // Hash password (default or provided)
         // Plan said "default password", but let's allow providing one if sent, else default.
-        const plainPassword = password || 'Welcome123!';
+        const plainPassword = password || 'password123';
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
