@@ -1,4 +1,75 @@
 const { User, Role } = require('../models');
+const bcrypt = require('bcryptjs');
+
+// @desc    Create a new user (Admin only)
+// @route   POST /api/users
+const createUser = async (req, res) => {
+    try {
+        const { fullName, email, role, password } = req.body;
+
+        // Validation
+        if (!fullName || !email || !role) {
+            return res.status(400).json({ message: 'Please provide all required fields' });
+        }
+
+        // Check if user exists
+        const userExists = await User.findOne({ where: { email } });
+        if (userExists) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+
+        // Validate Role (TA or Instructor)
+        const roleLower = role.toLowerCase();
+        const roleDoc = await Role.findOne({ where: { name: roleLower } });
+        if (!roleDoc) {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        if (!['TA', 'Instructor'].includes(role) && req.user.role.name !== 'admin') {
+            // Note: Depending on requirements, admin might want to create other admins too, 
+            // but spec says "staff accounts (TA and Instructor)".
+            // For now, let's allow creating any role if the role exists in DB, 
+            // but maybe restrict strictly to TA/Instructor if strictly requested.
+            // "The Admin must select the appropriate Role (either "TA" or "Instructor")"
+            // I will enforce TA or Instructor for now to be safe, or just check roleDoc.
+        }
+
+        // Strict requirement: "The Admin must select the appropriate Role (either "TA" or "Instructor")"
+        if (!['ta', 'instructor'].includes(roleLower)) {
+            return res.status(400).json({ message: 'Role must be either TA or Instructor' });
+        }
+
+        // Hash password (default or provided)
+        // Plan said "default password", but let's allow providing one if sent, else default.
+        const plainPassword = password || 'password123';
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(plainPassword, salt);
+
+        // Create user
+        const user = await User.create({
+            fullName,
+            email,
+            password: hashedPassword,
+            roleId: roleDoc.id,
+            createdById: req.user.id
+        });
+
+        if (user) {
+            res.status(201).json({
+                _id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                role: roleDoc.name,
+            });
+        } else {
+            res.status(400).json({ message: 'Invalid user data' });
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
 // @desc    Get all users (with optional role filtering)
 // @route   GET /api/users
@@ -63,5 +134,6 @@ const assignAdvisor = async (req, res) => {
 
 module.exports = {
     getAllUsers,
-    assignAdvisor
+    assignAdvisor,
+    createUser
 };
