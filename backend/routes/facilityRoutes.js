@@ -8,6 +8,7 @@ const {
   deleteFacility,
   updateFacilityStatus,
   getFacilityBookings,
+  createBooking,
 } = require('../controllers/facilityController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -23,6 +24,7 @@ router.get('/:id', getFacilityById);
 
 // Modification routes - admin only
 router.post('/', authorize('admin'), createFacility);
+router.post('/book', authorize('admin'), createBooking);
 router.put('/:id', authorize('admin'), updateFacility);
 router.delete('/:id', authorize('admin'), deleteFacility);
 router.patch('/:id/status', authorize('admin'), updateFacilityStatus);

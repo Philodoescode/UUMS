@@ -11,11 +11,13 @@ export type NavLink = {
 export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/facilities", label: "Facilities Management" },
+  { href: "/admin/maintenance", label: "Maintenance Requests" },
   { href: "/admin/calendar", label: "Facility Calendar" },
   { href: "/admin/curriculum", label: "Curriculum Management" },
   { href: "/admin/instructors", label: "Instructor Assignment" },
   { href: "/admin/students", label: "Student Management" },
   { href: "/admin/staff", label: "Staff Management" },
+  { href: "/admin/admissions", label: "Admission Management" },
   { href: "/admin/users", label: "User Management" },
   { href: "/admin/communications", label: "Communications" },
   { href: "/admin/reports", label: "System Reports" },
@@ -33,6 +35,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/my-students", label: "My Students" },
   { href: "/instructor/calendar", label: "Calendar & Events" },
   { href: "/instructor/communications", label: "Communications" },
+  { href: "/instructor/maintenance", label: "Maintenance" },
 ];
 
 /**

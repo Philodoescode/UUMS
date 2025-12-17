@@ -10,6 +10,7 @@ import StudentManagement from "@/pages/admin/StudentManagement"
 import FacilityManagement from "@/pages/admin/FacilityManagement"
 import StaffManagement from "@/pages/admin/StaffManagement"
 import FacilityCalendar from "@/pages/admin/FacilityCalendar"
+import AdmissionManagement from "@/pages/admin/AdmissionManagement"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -22,6 +23,8 @@ import AssessmentResult from "./pages/student/AssessmentResult";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import TADashboard from "@/pages/ta/Dashboard";
+import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
+import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import './App.css'
 
 function App() {
@@ -47,11 +50,13 @@ function App() {
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/maintenance" element={<MaintenanceRequests />} />
             <Route path="/admin/facilities" element={<FacilityManagement />} />
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
             <Route path="/admin/instructors" element={<InstructorAssignment />} />
             <Route path="/admin/students" element={<StudentManagement />} />
             <Route path="/admin/staff" element={<StaffManagement />} />
+            <Route path="/admin/admissions" element={<AdmissionManagement />} />
             <Route path="/admin/calendar" element={<FacilityCalendar />} />
           </Route>
 
@@ -60,6 +65,7 @@ function App() {
             {/* Redirect /instructor to /instructor/dashboard */}
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+            <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
           </Route>
 
