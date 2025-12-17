@@ -54,7 +54,9 @@ const MaintenanceReporting = () => {
         try {
             const [requestsData, facilitiesData] = await Promise.all([
                 getMaintenanceRequests(),
-                getAllFacilities({ limit: 1000 }), // Get all facilities for dropdown
+                // Note: Loading all facilities for dropdown. Consider implementing
+                // pagination, search, or lazy loading if facility count grows significantly
+                getAllFacilities({ limit: 1000 }),
             ]);
             setRequests(requestsData);
             setFacilities(facilitiesData.facilities);

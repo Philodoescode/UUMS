@@ -107,6 +107,8 @@ const updateAsset = async (req, res) => {
             }
         }
 
+        // Update asset - required fields use || to prevent clearing,
+        // optional fields (location, description) use !== undefined to allow explicit clearing with null/empty string
         await asset.update({
             name: name || asset.name,
             assetTag: assetTag || asset.assetTag,
