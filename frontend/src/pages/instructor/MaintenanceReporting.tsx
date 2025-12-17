@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { INSTRUCTOR_LINKS } from '@/config/navLinks';
@@ -49,7 +49,7 @@ const MaintenanceReporting = () => {
         severity: 'Low' as 'Low' | 'Medium' | 'High',
     });
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const [requestsData, facilitiesData] = await Promise.all([
@@ -61,17 +61,17 @@ const MaintenanceReporting = () => {
         } catch (error: any) {
             toast({
                 title: 'Error',
-                description: 'Failed to load data',
+                description: 'Failed to load maintenance requests and facilities',
                 variant: 'destructive',
             });
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

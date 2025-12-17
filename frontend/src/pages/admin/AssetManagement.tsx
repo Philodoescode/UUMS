@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     RefreshCw,
@@ -77,7 +77,9 @@ const AssetManagement = () => {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+    const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
 
     // Form states
     const [formData, setFormData] = useState<CreateAssetData>({
@@ -91,7 +93,7 @@ const AssetManagement = () => {
     const [checkoutNotes, setCheckoutNotes] = useState('');
     const [users, setUsers] = useState<User[]>([]);
 
-    const fetchAssets = async () => {
+    const fetchAssets = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getAllAssets();
@@ -106,23 +108,28 @@ const AssetManagement = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/users`, {
                 withCredentials: true,
             });
             setUsers(response.data);
         } catch (error) {
-            console.error('Failed to fetch users');
+            console.error('Failed to fetch users', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to load users for checkout. Please try again.',
+                variant: 'destructive',
+            });
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchAssets();
         fetchUsers();
-    }, []);
+    }, [fetchAssets, fetchUsers]);
 
     useEffect(() => {
         let filtered = assets;
@@ -168,11 +175,13 @@ const AssetManagement = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this asset?')) return;
+    const handleDelete = async () => {
+        if (!assetToDelete) return;
         try {
-            await deleteAsset(id);
+            await deleteAsset(assetToDelete);
             toast({ title: 'Success', description: 'Asset deleted successfully' });
+            setDeleteDialogOpen(false);
+            setAssetToDelete(null);
             fetchAssets();
         } catch (error: any) {
             toast({
@@ -352,7 +361,7 @@ const AssetManagement = () => {
                                             <Label htmlFor="category">Category</Label>
                                             <Select
                                                 value={formData.category}
-                                                onValueChange={(v: any) =>
+                                                onValueChange={(v: 'equipment' | 'furniture' | 'electronics' | 'other') =>
                                                     setFormData({ ...formData, category: v })
                                                 }
                                             >
@@ -503,7 +512,10 @@ const AssetManagement = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => handleDelete(asset.id)}
+                                                        onClick={() => {
+                                                            setAssetToDelete(asset.id);
+                                                            setDeleteDialogOpen(true);
+                                                        }}
                                                         title="Delete"
                                                         disabled={asset.status === 'checked_out'}
                                                     >
@@ -548,7 +560,7 @@ const AssetManagement = () => {
                             <Label htmlFor="edit-category">Category</Label>
                             <Select
                                 value={formData.category}
-                                onValueChange={(v: any) => setFormData({ ...formData, category: v })}
+                                onValueChange={(v: Asset['category']) => setFormData({ ...formData, category: v })}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
@@ -628,6 +640,32 @@ const AssetManagement = () => {
                         </Button>
                         <Button onClick={handleCheckout} disabled={!checkoutUserId}>
                             Checkout
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this asset? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => {
+                                setDeleteDialogOpen(false);
+                                setAssetToDelete(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete}>
+                            Delete
                         </Button>
                     </DialogFooter>
                 </DialogContent>
