@@ -18,6 +18,7 @@ const Material = require('./materialModel');
 const Facility = require('./facilityModel');
 const Booking = require('./bookingModel');
 const AdmissionApplication = require('./admissionApplicationModel');
+const StudentDocument = require('./studentDocumentModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -138,6 +139,13 @@ Booking.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 User.hasMany(Booking, { foreignKey: 'bookedById', as: 'bookings' });
 Booking.belongsTo(User, { foreignKey: 'bookedById', as: 'bookedBy' });
 
+// ===== Student Document Associations =====
+User.hasMany(StudentDocument, { foreignKey: 'studentId', as: 'documents' });
+StudentDocument.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+
+User.hasMany(StudentDocument, { foreignKey: 'uploadedById', as: 'uploadedDocuments' });
+StudentDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploader' });
+
 module.exports = {
   sequelize,
   User,
@@ -158,4 +166,5 @@ module.exports = {
   Facility,
   Booking,
   AdmissionApplication,
+  StudentDocument,
 };
