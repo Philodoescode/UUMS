@@ -18,6 +18,7 @@ export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/students", label: "Student Management" },
   { href: "/admin/staff", label: "Staff Management" },
   { href: "/admin/admissions", label: "Admission Management" },
+  { href: "/admin/assets", label: "Asset Management" },
   { href: "/admin/users", label: "User Management" },
   { href: "/admin/communications", label: "Communications" },
   { href: "/admin/reports", label: "System Reports" },

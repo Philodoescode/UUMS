@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, CheckCircle, Clock, AlertTriangle, Filter } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { ADMIN_LINKS } from '@/config/navLinks';
@@ -32,7 +32,7 @@ const MaintenanceRequests = () => {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const { toast } = useToast();
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getMaintenanceRequests();
@@ -41,17 +41,17 @@ const MaintenanceRequests = () => {
         } catch (error: any) {
             toast({
                 title: 'Error',
-                description: 'Failed to load requests',
+                description: 'Failed to load maintenance requests',
                 variant: 'destructive',
             });
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchRequests();
-    }, []);
+    }, [fetchRequests]);
 
     useEffect(() => {
         if (statusFilter === 'all') {
@@ -194,8 +194,8 @@ const MaintenanceRequests = () => {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Select
-                                                    defaultValue={request.status}
-                                                    onValueChange={(value: any) =>
+                                                    value={request.status}
+                                                    onValueChange={(value: 'Reported' | 'In Progress' | 'Resolved') =>
                                                         handleStatusChange(request.id, value)
                                                     }
                                                 >
