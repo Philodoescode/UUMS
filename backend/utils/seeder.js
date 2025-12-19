@@ -4,7 +4,7 @@ const { Role, User, Department, Instructor } = require('../models');
 const seedDatabase = async () => {
   try {
     // 1. Check & Create Roles
-    const roles = ['admin', 'instructor', 'student', 'advisor'];
+    const roles = ['admin', 'instructor', 'student', 'advisor', 'hr'];
     const roleDocs = {};
 
     for (const roleName of roles) {

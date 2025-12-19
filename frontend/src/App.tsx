@@ -27,6 +27,7 @@ import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
 import AssetDetails from "@/pages/admin/AssetDetails";
+import HRDashboard from "@/pages/hr/Dashboard";
 import './App.css'
 
 function App() {
@@ -96,6 +97,12 @@ function App() {
             <Route path="/student/assignment/:assessmentId" element={<StudentAssignmentSubmit />} /> {/* Added route */}
             <Route path="/student/assessment/result/:submissionId" element={<AssessmentResult />} />
             {/* Add other student routes here */}
+          </Route>
+
+          {/* HR Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['hr']} />}>
+            <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
+            <Route path="/hr/dashboard" element={<HRDashboard />} />
           </Route>
 
           {/* Catch all */}

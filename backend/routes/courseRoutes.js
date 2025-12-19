@@ -15,8 +15,8 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // All routes require authentication
 router.use(protect);
 
-// GET routes - accessible to all authenticated users
-router.get('/', getAllCourses);
+// GET routes - accessible to all authenticated users EXCEPT HR
+router.get('/', authorize('admin', 'student', 'instructor', 'advisor'), getAllCourses);
 router.get('/:id', getCourseById);
 router.get('/:id/instructors', getCourseInstructors);
 
