@@ -27,6 +27,8 @@ import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
 import AssetDetails from "@/pages/admin/AssetDetails";
+import HREmployees from "@/pages/admin/HREmployees";
+import HRDashboard from "@/pages/hr/HRDashboard";
 import './App.css'
 
 function App() {
@@ -77,6 +79,13 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
             <Route path="/ta" element={<Navigate to="/ta/dashboard" replace />} />
             <Route path="/ta/dashboard" element={<TADashboard />} />
+          </Route>
+
+          {/* HR Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['hr']} />}>
+            <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
+            <Route path="/hr/dashboard" element={<HRDashboard />} />
+            <Route path="/hr/employees" element={<HREmployees />} />
           </Route>
 
           {/* Advisor Routes */}

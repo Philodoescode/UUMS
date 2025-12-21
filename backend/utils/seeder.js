@@ -1,10 +1,10 @@
 const bcrypt = require('bcryptjs');
-const { Role, User, Department, Instructor } = require('../models');
+const { Role, User, Department, Instructor, Compensation } = require('../models');
 
 const seedDatabase = async () => {
   try {
     // 1. Check & Create Roles
-    const roles = ['admin', 'instructor', 'student', 'advisor'];
+    const roles = ['admin', 'instructor', 'student', 'advisor', 'hr', 'ta'];
     const roleDocs = {};
 
     for (const roleName of roles) {
@@ -70,6 +70,18 @@ const seedDatabase = async () => {
         password: hashedPassword,
         roleId: roleDocs['advisor'],
       },
+      {
+        fullName: 'HR Administrator',
+        email: 'hr@example.com',
+        password: hashedPassword,
+        roleId: roleDocs['hr'],
+      },
+      {
+        fullName: 'TA User',
+        email: 'ta@example.com',
+        password: hashedPassword,
+        roleId: roleDocs['ta'],
+      },
     ];
 
     const createdUsers = {};
@@ -98,6 +110,62 @@ const seedDatabase = async () => {
       });
       if (created) {
         console.log(`Instructor profile created for: ${instructorUser.email}`);
+      }
+
+      // Create compensation record for instructor
+      const [compensation, compCreated] = await Compensation.findOrCreate({
+        where: { userId: instructorUser.id },
+        defaults: {
+          userId: instructorUser.id,
+          baseSalary: 75000.00,
+          housingAllowance: 12000.00,
+          transportAllowance: 3600.00,
+          bonuses: 5000.00,
+          taxDeduction: 15000.00,
+          insuranceDeduction: 2400.00,
+          unpaidLeaveDeduction: 0.00,
+          otherDeductions: 0.00,
+        },
+      });
+      if (compCreated) {
+        console.log(`Compensation record created for: ${instructorUser.email}`);
+      }
+    }
+
+    // 5. Create TA profile and compensation
+    const taUser = createdUsers['ta@example.com'];
+    if (taUser) {
+      // TAs might also have instructor profiles (as they are teaching assistants)
+      const [taInstructor, created] = await Instructor.findOrCreate({
+        where: { userId: taUser.id },
+        defaults: {
+          userId: taUser.id,
+          departmentId: departmentDocs['CS'],
+          title: 'Teaching Assistant',
+          officeLocation: 'Room 205',
+        },
+      });
+      if (created) {
+        console.log(`TA profile created for: ${taUser.email}`);
+      }
+
+      // Create compensation record for TA
+      const [compensation, compCreated] = await Compensation.findOrCreate({
+        where: { userId: taUser.id },
+        defaults: {
+          userId: taUser.id,
+          baseSalary: 35000.00,
+          housingAllowance: 6000.00,
+          transportAllowance: 1800.00,
+          bonuses: 1000.00,
+          taxDeduction: 5000.00,
+          insuranceDeduction: 1200.00,
+          unpaidLeaveDeduction: 0.00,
+          otherDeductions: 0.00,
+        },
+      });
+      if (compCreated) {
+        console.log(`Compensation record created for: ${taUser.email}`);
       }
     }
 
