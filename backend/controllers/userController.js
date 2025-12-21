@@ -35,8 +35,8 @@ const createUser = async (req, res) => {
         }
 
         // Strict requirement: "The Admin must select the appropriate Role (either "TA" or "Instructor")"
-        if (!['ta', 'instructor'].includes(roleLower)) {
-            return res.status(400).json({ message: 'Role must be either TA or Instructor' });
+        if (!['ta', 'instructor', 'hr'].includes(roleLower)) {
+            return res.status(400).json({ message: 'Role must be either TA, Instructor, or HR' });
         }
 
         // Hash password (default or provided)

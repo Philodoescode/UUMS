@@ -71,7 +71,7 @@ const StaffManagement = () => {
                 const roleName = u.role?.name || u.role;
                 const normalizedRole = String(roleName).toLowerCase().trim();
                 console.log(`User ${u.email} role:`, roleName, 'Normalized:', normalizedRole);
-                return ['ta', 'instructor'].includes(normalizedRole);
+                return ['ta', 'instructor', 'hr'].includes(normalizedRole);
             });
 
             console.log('Filtered staff:', staffMembers);
@@ -147,7 +147,7 @@ const StaffManagement = () => {
                                     <DialogHeader>
                                         <DialogTitle>Create Staff Account</DialogTitle>
                                         <DialogDescription>
-                                            Add a new TA or Instructor. They will be able to log in with their email and default password.
+                                            Add a new TA or Instructor or HR Administrator. They will be able to log in with their email and default password.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
@@ -188,6 +188,7 @@ const StaffManagement = () => {
                                                     <SelectContent>
                                                         <SelectItem value="ta">Teaching Assistant (TA)</SelectItem>
                                                         <SelectItem value="instructor">Instructor</SelectItem>
+                                                        <SelectItem value="hr">HR Administrator</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>

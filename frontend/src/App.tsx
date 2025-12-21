@@ -107,6 +107,12 @@ function App() {
             {/* Add other student routes here */}
           </Route>
 
+          {/* HR Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['hr']} />}>
+            <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
+            <Route path="/hr/dashboard" element={<HRDashboard />} />
+          </Route>
+
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
