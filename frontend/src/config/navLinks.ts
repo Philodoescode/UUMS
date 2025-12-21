@@ -52,3 +52,13 @@ export const STUDENT_LINKS: NavLink[] = [
   { href: "/student/community", label: "Community Hub" },
   { href: "/student/directory", label: "Faculty Directory" },
 ];
+
+/**
+ * HR Navbar
+ * Focused on HR functions like compensation management and leave requests.
+ */
+export const HR_LINKS: NavLink[] = [
+  { href: "/hr/dashboard", label: "Dashboard" },
+  { href: "/hr/employees", label: "Employees" },
+  { href: "/hr/benefits", label: "Benefits & Insurance" },
+];

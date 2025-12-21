@@ -22,6 +22,9 @@ const AdmissionApplication = require('./admissionApplicationModel');
 const StudentDocument = require('./studentDocumentModel');
 const Asset = require('./assetModel');
 const AssetAllocationLog = require('./assetAllocationLogModel');
+const Compensation = require('./compensationModel');
+const LeaveRequest = require('./leaveRequestModel');
+const CompensationAuditLog = require('./compensationAuditLogModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -166,6 +169,23 @@ AssetAllocationLog.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
 AssetAllocationLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 AssetAllocationLog.belongsTo(User, { foreignKey: 'performedById', as: 'performedBy' });
 
+// ===== Compensation Associations =====
+User.hasOne(Compensation, { foreignKey: 'userId', as: 'compensation' });
+Compensation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// ===== Leave Request Associations =====
+User.hasMany(LeaveRequest, { foreignKey: 'userId', as: 'leaveRequests' });
+LeaveRequest.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+LeaveRequest.belongsTo(User, { foreignKey: 'reviewedById', as: 'reviewedBy' });
+
+// ===== Compensation Audit Log Associations =====
+Compensation.hasMany(CompensationAuditLog, { foreignKey: 'compensationId', as: 'auditLogs' });
+CompensationAuditLog.belongsTo(Compensation, { foreignKey: 'compensationId', as: 'compensation' });
+
+CompensationAuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+CompensationAuditLog.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
+
 module.exports = {
   sequelize,
   User,
@@ -190,4 +210,7 @@ module.exports = {
   StudentDocument,
   Asset,
   AssetAllocationLog,
+  Compensation,
+  LeaveRequest,
+  CompensationAuditLog,
 };

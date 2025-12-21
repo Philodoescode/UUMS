@@ -1,28 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const {
-    getCompensation,
+    getAllEmployees,
+    getEmployeeById,
     updateCompensation,
-    getBenefits,
-    updateBenefits,
+    getCompensationAuditLogs,
     getLeaveRequests,
-    respondLeaveRequest
+    getEmployeeLeaveRequests,
+    reviewLeaveRequest
 } = require('../controllers/hrController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// All routes require authentication
+// All routes require authentication and HR role
 router.use(protect);
-
-// HR Role Authorization for all specific HR routes
 router.use(authorize('hr'));
 
-router.get('/compensation', getCompensation);
-router.post('/compensation', updateCompensation);
+// Employee management routes
+router.get('/employees', getAllEmployees);
+router.get('/employees/:id', getEmployeeById);
+router.put('/employees/:id/compensation', updateCompensation);
+router.get('/employees/:id/compensation/audit', getCompensationAuditLogs);
+router.get('/employees/:id/leave-requests', getEmployeeLeaveRequests);
 
-router.get('/benefits', getBenefits);
-router.post('/benefits', updateBenefits);
-
-router.get('/leaves', getLeaveRequests);
-router.put('/leaves/:id', respondLeaveRequest);
+// Leave request management routes
+router.get('/leave-requests', getLeaveRequests);
+router.put('/leave-requests/:id', reviewLeaveRequest);
 
 module.exports = router;
