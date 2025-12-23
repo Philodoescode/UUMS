@@ -198,12 +198,15 @@ StudentDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploader' });
 // ===== Asset Associations =====
 Asset.belongsTo(User, { foreignKey: 'currentHolderId', as: 'currentHolder' });
 User.hasMany(Asset, { foreignKey: 'currentHolderId', as: 'heldAssets' });
+Asset.belongsTo(Department, { foreignKey: 'assignedToDepartmentId', as: 'assignedDepartment' });
+Department.hasMany(Asset, { foreignKey: 'assignedToDepartmentId', as: 'departmentAssets' });
 
 // ===== Asset Allocation Log Associations =====
 Asset.hasMany(AssetAllocationLog, { foreignKey: 'assetId', as: 'allocationHistory' });
 AssetAllocationLog.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
 
 AssetAllocationLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+AssetAllocationLog.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 AssetAllocationLog.belongsTo(User, { foreignKey: 'performedById', as: 'performedBy' });
 
 // ===== Compensation Associations =====

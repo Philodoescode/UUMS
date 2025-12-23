@@ -1,4 +1,4 @@
-const { Asset, AssetAllocationLog, User } = require('../models');
+const { Asset, AssetAllocationLog, User, Department } = require('../models');
 
 // @desc    Get all assets
 // @route   GET /api/assets
@@ -13,9 +13,11 @@ const getAllAssets = async (req, res) => {
         const assets = await Asset.findAll({
             where,
             include: [
-                { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] }
-            ],
-            order: [['createdAt', 'DESC']],
+                include: [
+                    { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
+                    { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] }
+                ],
+                order: [['createdAt', 'DESC']],
         });
 
         res.json(assets);
@@ -34,11 +36,13 @@ const getAssetById = async (req, res) => {
         const asset = await Asset.findByPk(id, {
             include: [
                 { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
+                { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] },
                 {
                     model: AssetAllocationLog,
                     as: 'allocationHistory',
                     include: [
                         { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] },
+                        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
                         { model: User, as: 'performedBy', attributes: ['id', 'fullName', 'email'] }
                     ],
                 }
@@ -132,45 +136,59 @@ const updateAsset = async (req, res) => {
 const checkoutAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId, notes } = req.body;
+        const { userId, departmentId, notes } = req.body;
 
         const asset = await Asset.findByPk(id);
         if (!asset) {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        if (asset.status === 'In Use') { // Updated status check
+        if (asset.status === 'In Use') {
             return res.status(400).json({ message: 'Asset is already checked out' });
         }
 
-        if (asset.status === 'Retired') { // Updated status check
+        if (asset.status === 'Retired') {
             return res.status(400).json({ message: 'Cannot checkout a retired asset' });
         }
 
-        // Verify user exists
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        if (!userId && !departmentId) {
+            return res.status(400).json({ message: 'Must provide either userId or departmentId' });
         }
 
-        // Update asset
-        await asset.update({
-            status: 'In Use', // Updated status
-            currentHolderId: userId,
-        });
-
-        // Create allocation log entry
-        await AssetAllocationLog.create({
+        let updateData = { status: 'In Use' };
+        let logData = {
             assetId: id,
-            userId: userId,
             action: 'checked_out',
             performedById: req.user.id,
             notes,
-        });
+        };
+
+        if (userId) {
+            const user = await User.findByPk(userId);
+            if (!user) return res.status(404).json({ message: 'User not found' });
+            updateData.currentHolderId = userId;
+            updateData.assignedToDepartmentId = null; // Clear dept if assigning to user
+            logData.userId = userId;
+        } else if (departmentId) {
+            const dept = await Department.findByPk(departmentId);
+            if (!dept) return res.status(404).json({ message: 'Department not found' });
+            updateData.assignedToDepartmentId = departmentId;
+            updateData.currentHolderId = null; // Clear user if assigning to dept
+            logData.departmentId = departmentId;
+        }
+
+        // Update asset
+        await asset.update(updateData);
+
+        // Create log
+        await AssetAllocationLog.create(logData);
 
         // Reload with associations
         await asset.reload({
-            include: [{ model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] }]
+            include: [
+                { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
+                { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] }
+            ]
         });
 
         res.json({ message: 'Asset checked out successfully', asset });
@@ -197,25 +215,20 @@ const returnAsset = async (req, res) => {
         }
 
         const previousHolderId = asset.currentHolderId;
-
-        // Verify the previous holder exists before creating log
-        if (previousHolderId) {
-            const previousHolder = await User.findByPk(previousHolderId);
-            if (!previousHolder) {
-                // Should not happen if foreign key constraint holds, but soft deletes might affect this
-            }
-        }
+        const previousDepartmentId = asset.assignedToDepartmentId;
 
         // Update asset
         await asset.update({
-            status: 'Available', // Updated status
+            status: 'Available',
             currentHolderId: null,
+            assignedToDepartmentId: null,
         });
 
         // Create allocation log entry
         await AssetAllocationLog.create({
             assetId: id,
             userId: previousHolderId,
+            departmentId: previousDepartmentId,
             action: 'returned',
             performedById: req.user.id,
             notes,
