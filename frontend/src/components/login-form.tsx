@@ -49,6 +49,7 @@ export function LoginForm({
       else if (user.role === 'student') navigate('/student');
       else if (user.role === 'advisor') navigate('/advisor');
       else if (user.role === 'hr') navigate('/hr');
+      else if (user.role === 'parent') navigate('/parent');
 
     } catch (err: any) {
       setError(err.response?.data?.message || "An unexpected error occurred.");

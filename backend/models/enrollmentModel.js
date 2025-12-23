@@ -41,6 +41,14 @@ const Enrollment = sequelize.define('Enrollment', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+  attendancePercentage: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 100,
+    },
+  },
 }, {
   tableName: 'enrollments',
   timestamps: true,

@@ -28,6 +28,22 @@ const Compensation = require('./compensationModel');
 const LeaveRequest = require('./leaveRequestModel');
 const CompensationAuditLog = require('./compensationAuditLogModel');
 const DirectMessage = require('./directMessageModel');
+const ParentStudent = require('./parentStudentModel');
+
+// ===== Parent & Student Associations =====
+User.belongsToMany(User, {
+  through: ParentStudent,
+  as: 'children',
+  foreignKey: 'parentId',
+  otherKey: 'studentId'
+});
+User.belongsToMany(User, {
+  through: ParentStudent,
+  as: 'parents',
+  foreignKey: 'studentId',
+  otherKey: 'parentId'
+});
+
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -244,4 +260,5 @@ module.exports = {
   LeaveRequest,
   CompensationAuditLog,
   DirectMessage,
+  ParentStudent,
 };
