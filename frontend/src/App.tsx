@@ -11,6 +11,7 @@ import FacilityManagement from "@/pages/admin/FacilityManagement"
 import StaffManagement from "@/pages/admin/StaffManagement"
 import FacilityCalendar from "@/pages/admin/FacilityCalendar"
 import AdmissionManagement from "@/pages/admin/AdmissionManagement"
+import Announcements from "@/pages/admin/Announcements"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -54,6 +55,7 @@ function App() {
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/announcements" element={<Announcements />} />
             <Route path="/admin/maintenance" element={<MaintenanceRequests />} />
             <Route path="/admin/facilities" element={<FacilityManagement />} />
             <Route path="/admin/curriculum" element={<CurriculumManagement />} />
@@ -71,6 +73,7 @@ function App() {
             {/* Redirect /instructor to /instructor/dashboard */}
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+            <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
           </Route>
@@ -85,6 +88,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['hr']} />}>
             <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
             <Route path="/hr/dashboard" element={<HRDashboard />} />
+            <Route path="/hr/announcements" element={<Announcements />} />
             <Route path="/hr/employees" element={<HREmployees />} />
           </Route>
 

@@ -10,6 +10,7 @@ export type NavLink = {
  */
 export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/announcements", label: "Announcements" },
   { href: "/admin/facilities", label: "Facilities Management" },
   { href: "/admin/maintenance", label: "Maintenance Requests" },
   { href: "/admin/calendar", label: "Facility Calendar" },
@@ -31,6 +32,7 @@ export const ADMIN_LINKS: NavLink[] = [
  */
 export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/dashboard", label: "Dashboard" },
+  { href: "/instructor/announcements", label: "Announcements" },
   { href: "/instructor/grades", label: "Grade Management" },
   { href: "/instructor/my-courses", label: "My Courses" },
   { href: "/instructor/my-students", label: "My Students" },
@@ -59,6 +61,7 @@ export const STUDENT_LINKS: NavLink[] = [
  */
 export const HR_LINKS: NavLink[] = [
   { href: "/hr/dashboard", label: "Dashboard" },
+  { href: "/hr/announcements", label: "Announcements" },
   { href: "/hr/employees", label: "Employees" },
   { href: "/hr/benefits", label: "Benefits & Insurance" },
 ];
