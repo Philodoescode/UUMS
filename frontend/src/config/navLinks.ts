@@ -52,7 +52,9 @@ export const STUDENT_LINKS: NavLink[] = [
   { href: "/student/academics", label: "Academics" },
   { href: "/student/registration", label: "Course Registration" },
   { href: "/student/community", label: "Community Hub" },
+  { href: "/student/questions", label: "Questions" },
   { href: "/student/directory", label: "Faculty Directory" },
+  { href: "/student/messages", label: "Messages" },
 ];
 
 /**

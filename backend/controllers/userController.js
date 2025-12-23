@@ -132,8 +132,69 @@ const assignAdvisor = async (req, res) => {
     }
 };
 
+// @desc    Get faculty members (Instructors and TAs) - accessible by any authenticated user
+// @route   GET /api/users/faculty
+const getFacultyMembers = async (req, res) => {
+    try {
+        // Find instructor and TA role IDs
+        const instructorRole = await Role.findOne({ where: { name: 'instructor' } });
+        const taRole = await Role.findOne({ where: { name: 'ta' } });
+
+        if (!instructorRole && !taRole) {
+            return res.json([]);
+        }
+
+        const roleIds = [];
+        if (instructorRole) roleIds.push(instructorRole.id);
+        if (taRole) roleIds.push(taRole.id);
+
+        const { Op } = require('sequelize');
+        
+        const faculty = await User.findAll({
+            where: {
+                roleId: { [Op.in]: roleIds }
+            },
+            include: [
+                { model: Role, as: 'role', attributes: ['name'] }
+            ],
+            attributes: ['id', 'fullName', 'email']
+        });
+
+        res.json(faculty);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get a single user by ID - accessible by any authenticated user
+// @route   GET /api/users/:id
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const user = await User.findByPk(id, {
+            include: [
+                { model: Role, as: 'role', attributes: ['name'] }
+            ],
+            attributes: ['id', 'fullName', 'email']
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getAllUsers,
     assignAdvisor,
-    createUser
+    createUser,
+    getFacultyMembers,
+    getUserById
 };

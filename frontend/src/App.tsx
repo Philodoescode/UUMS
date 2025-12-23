@@ -21,6 +21,8 @@ import Academics from "@/pages/student/Academics"
 import CourseDetails from "@/pages/student/CourseDetails"
 import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
+import FacultyDirectory from "./pages/student/FacultyDirectory";
+import Messages from "./pages/student/Messages";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import TADashboard from "@/pages/ta/Dashboard";
@@ -108,6 +110,11 @@ function App() {
             <Route path="/student/assessment/take/:assessmentId" element={<AssessmentTake />} />
             <Route path="/student/assignment/:assessmentId" element={<StudentAssignmentSubmit />} /> {/* Added route */}
             <Route path="/student/assessment/result/:submissionId" element={<AssessmentResult />} />
+            
+            {/* New Routes */}
+            <Route path="/student/directory" element={<FacultyDirectory />} />
+            <Route path="/student/messages" element={<Messages />} />
+
             {/* Add other student routes here */}
           </Route>
 
