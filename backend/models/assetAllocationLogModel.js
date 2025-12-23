@@ -17,12 +17,21 @@ const AssetAllocationLog = sequelize.define('AssetAllocationLog', {
     },
     userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: 'users',
             key: 'id',
         },
         comment: 'The user associated with this action (received on checkout, returned on return)',
+    },
+    departmentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'departments',
+            key: 'id',
+        },
+        comment: 'The department associated with this action (if assigned to department)',
     },
     action: {
         type: DataTypes.ENUM('checked_out', 'returned'),

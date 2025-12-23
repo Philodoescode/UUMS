@@ -55,6 +55,14 @@ const Asset = sequelize.define('Asset', {
             key: 'id',
         },
     },
+    assignedToDepartmentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'departments',
+            key: 'id',
+        },
+    },
     location: {
         type: DataTypes.STRING,
         allowNull: true,
