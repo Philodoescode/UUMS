@@ -63,7 +63,7 @@ const getAssetById = async (req, res) => {
 // @route   POST /api/assets
 const createAsset = async (req, res) => {
     try {
-        const { assetName, serialNumber, type, purchaseDate, value, location, description } = req.body;
+        const { assetName, serialNumber, type, purchaseDate, value, location, description, status } = req.body;
 
         // Check for duplicate serial number
         const existingAsset = await Asset.findOne({ where: { serialNumber } });
@@ -79,7 +79,7 @@ const createAsset = async (req, res) => {
             value,
             location,
             description,
-            status: 'Available',
+            status: status || 'Available',
         });
 
         res.status(201).json(asset);

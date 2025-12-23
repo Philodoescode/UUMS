@@ -47,6 +47,7 @@ export interface CreateAssetData {
     value: number;
     location?: string;
     description?: string;
+    status?: 'Available' | 'In Use' | 'Retired';
 }
 
 export interface UpdateAssetData {
