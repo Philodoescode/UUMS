@@ -33,11 +33,28 @@ const protect = async (req, res, next) => {
 
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !req.user.role || !allowedRoles.includes(req.user.role.name)) {
-      return res.status(403).json({ 
-        message: `User role '${req.user?.role?.name}' is not authorized to access this route` 
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized, no user in request' });
+    }
+
+    const allowedRolesLower = allowedRoles.map((r) => r.toLowerCase());
+
+    // Consider both the primary role and any extra roles attached via many-to-many
+    const primaryRole = req.user.role?.name;
+    const extraRoles = Array.isArray(req.user.roles) ? req.user.roles.map((r) => r.name) : [];
+
+    const normalizedUserRoles = [primaryRole, ...extraRoles]
+      .filter(Boolean)
+      .map((name) => name.trim().toLowerCase());
+
+    const isAllowed = normalizedUserRoles.some((r) => allowedRolesLower.includes(r));
+
+    if (!isAllowed) {
+      return res.status(403).json({
+        message: `User role '${primaryRole || 'unknown'}' is not authorized to access this route`,
       });
     }
+
     next();
   };
 };

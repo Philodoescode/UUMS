@@ -14,6 +14,7 @@ import AdmissionManagement from "@/pages/admin/AdmissionManagement"
 import Announcements from "@/pages/admin/Announcements"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
+import InstructorMessages from "@/pages/instructor/Messages"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
@@ -21,6 +22,8 @@ import Academics from "@/pages/student/Academics"
 import CourseDetails from "@/pages/student/CourseDetails"
 import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
+import FacultyDirectory from "./pages/student/FacultyDirectory";
+import Messages from "./pages/student/Messages";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import TADashboard from "@/pages/ta/Dashboard";
@@ -76,6 +79,7 @@ function App() {
             <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
+            <Route path="/instructor/messages" element={<InstructorMessages />} />
           </Route>
 
           {/* TA Routes */}
@@ -108,6 +112,11 @@ function App() {
             <Route path="/student/assessment/take/:assessmentId" element={<AssessmentTake />} />
             <Route path="/student/assignment/:assessmentId" element={<StudentAssignmentSubmit />} /> {/* Added route */}
             <Route path="/student/assessment/result/:submissionId" element={<AssessmentResult />} />
+            
+            {/* New Routes */}
+            <Route path="/student/directory" element={<FacultyDirectory />} />
+            <Route path="/student/messages" element={<Messages />} />
+
             {/* Add other student routes here */}
           </Route>
 
