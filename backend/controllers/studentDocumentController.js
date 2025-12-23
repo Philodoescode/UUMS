@@ -117,7 +117,8 @@ exports.generateTranscript = async (req, res) => {
         // 4. Generate Transcript Meta Data
         const transcriptId = `TR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
         const generatedAt = new Date().toUTCString();
-        const verificationUrl = `https://uums.edu/verify?tid=${transcriptId}&sid=${student.id}`;
+        // Use localhost for now as 'my website'
+        const verificationUrl = `http://localhost:5173/verify?tid=${transcriptId}&sid=${student.id}`;
 
         // 5. Generate QR Code
         const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl);
@@ -135,7 +136,8 @@ exports.generateTranscript = async (req, res) => {
         doc.fontSize(24).font('Helvetica-Bold').text('University Unified Management System', { align: 'center' });
         doc.fontSize(10).font('Helvetica').text('Office of the University Registrar', { align: 'center' });
         doc.text('123 Academic Avenue, Knowledge City, World', { align: 'center' });
-        doc.text('www.uums.edu', { align: 'center', link: 'https://www.uums.edu' });
+        // Update link to point to localhost as requested
+        doc.text('www.uums.edu', { align: 'center', link: 'http://localhost:5173' });
 
         doc.moveDown(2);
 
@@ -155,14 +157,21 @@ exports.generateTranscript = async (req, res) => {
         // Right Column: Document Info
         doc.font('Helvetica-Bold').text('Document Details:', 350, infoTop);
         doc.font('Helvetica').text(`Transcript ID: ${transcriptId}`, 350, infoTop + 15);
-        doc.text(`Generated At: ${generatedAt}`, 350, infoTop + 30);
+        doc.text(`Generated At: ${generatedAt}`, 350, infoTop + 30, { width: 220 });
 
-        // QR Code Image
-        doc.image(qrCodeDataUrl, 450, infoTop - 10, { width: 80 });
+        // QR Code Image - Moved DOWN to avoid overlap with text
+        // Previous position was infoTop - 10 (overlap). New position: infoTop + 45 (below text)
+        doc.text('Scan to Verify:', 350, infoTop + 60);
+        doc.image(qrCodeDataUrl, 350, infoTop + 75, { width: 60 });
 
         doc.moveDown(6);
 
         // --- ACADEMIC SUMMARY ---
+        // Move down further to account for QR code height
+        // QR code is at infoTop + 75 with height ~60 = infoTop + 135.
+        // Let's set Y explicitly or moveDown inside loop or dynamic
+        doc.y = Math.max(doc.y, infoTop + 150);
+
         doc.rect(50, doc.y, 500, 25).fill('#f0f0f0');
         doc.fillColor('black').font('Helvetica-Bold').fontSize(11).text(`Cumulative GPA: ${gpa}   |   Total Credits Earned: ${totalCredits}`, 50, doc.y - 18, { align: 'center', width: 500 });
         doc.moveDown(2);
