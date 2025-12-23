@@ -37,7 +37,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/my-courses", label: "My Courses" },
   { href: "/instructor/my-students", label: "My Students" },
   { href: "/instructor/calendar", label: "Calendar & Events" },
-  { href: "/instructor/communications", label: "Communications" },
+  { href: "/instructor/messages", label: "Messages" },
   { href: "/instructor/maintenance", label: "Maintenance" },
 ];
 

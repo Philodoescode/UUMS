@@ -124,7 +124,109 @@ const getMessageHistory = async (req, res) => {
   }
 };
 
+// @desc    Get inbox - list of conversations with most recent message
+// @route   GET /api/messages/inbox
+const getInbox = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+
+    // Get all messages involving the current user
+    const allMessages = await DirectMessage.findAll({
+      where: {
+        [Op.or]: [{ senderId: currentUserId }, { recipientId: currentUserId }],
+      },
+      include: [
+        {
+          model: User,
+          as: 'sender',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        {
+          model: User,
+          as: 'recipient',
+          attributes: ['id', 'fullName', 'email'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Group messages by the "other user" (the person we're chatting with)
+    const conversationsMap = new Map();
+
+    for (const msg of allMessages) {
+      // Determine who the "other user" is
+      const otherUserId =
+        msg.senderId === currentUserId ? msg.recipientId : msg.senderId;
+      const otherUser =
+        msg.senderId === currentUserId ? msg.recipient : msg.sender;
+
+      // Only keep the first (most recent) message per conversation
+      if (!conversationsMap.has(otherUserId)) {
+        // Count unread messages in this conversation (messages TO current user that are unread)
+        const unreadCount = allMessages.filter(
+          (m) =>
+            m.senderId === otherUserId &&
+            m.recipientId === currentUserId &&
+            !m.isRead
+        ).length;
+
+        conversationsMap.set(otherUserId, {
+          recipientId: otherUserId,
+          participant: {
+            id: otherUser.id,
+            fullName: otherUser.fullName,
+            email: otherUser.email,
+          },
+          lastMessage: {
+            id: msg.id,
+            body: msg.body,
+            createdAt: msg.createdAt,
+            isFromMe: msg.senderId === currentUserId,
+          },
+          unreadCount,
+        });
+      }
+    }
+
+    // Convert map to array (already ordered by most recent)
+    const conversations = Array.from(conversationsMap.values());
+
+    res.json(conversations);
+  } catch (error) {
+    console.error('Error fetching inbox:', error);
+    res.status(500).json({ message: 'Server error while fetching inbox' });
+  }
+};
+
+// @desc    Mark messages as read
+// @route   PUT /api/messages/:senderId/read
+const markAsRead = async (req, res) => {
+  try {
+    const { senderId } = req.params;
+    const currentUserId = req.user.id;
+
+    // Mark all messages from this sender to current user as read
+    await DirectMessage.update(
+      { isRead: true },
+      {
+        where: {
+          senderId: senderId,
+          recipientId: currentUserId,
+          isRead: false,
+        },
+      }
+    );
+
+    res.json({ message: 'Messages marked as read' });
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    res.status(500).json({ message: 'Server error while marking messages as read' });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessageHistory,
+  getInbox,
+  markAsRead,
 };

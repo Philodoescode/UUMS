@@ -14,6 +14,7 @@ import AdmissionManagement from "@/pages/admin/AdmissionManagement"
 import Announcements from "@/pages/admin/Announcements"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
+import InstructorMessages from "@/pages/instructor/Messages"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
@@ -78,6 +79,7 @@ function App() {
             <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
+            <Route path="/instructor/messages" element={<InstructorMessages />} />
           </Route>
 
           {/* TA Routes */}

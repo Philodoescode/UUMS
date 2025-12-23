@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
-import { STUDENT_LINKS } from "@/config/navLinks";
+import { INSTRUCTOR_LINKS } from "@/config/navLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
-import { Send, User as UserIcon, ArrowLeft, MessageSquare } from "lucide-react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { Send, ArrowLeft, MessageSquare } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import InboxList from "@/components/InboxList";
 
@@ -27,9 +27,8 @@ interface User {
   profileImage?: string;
 }
 
-const Messages = () => {
+const InstructorMessages = () => {
     const [searchParams, setSearchParams] = useSearchParams();
-    const navigate = useNavigate();
     const recipientId = searchParams.get('recipientId');
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
@@ -77,7 +76,6 @@ const Messages = () => {
 
     const fetchRecipientDetails = async (id: string) => {
         try {
-            // Use direct user lookup endpoint - accessible to all authenticated users
             const response = await api.get(`/users/${id}`);
             setActiveRecipient(response.data);
         } catch (error) {
@@ -93,7 +91,6 @@ const Messages = () => {
             setMessages(response.data);
         } catch (error) {
             console.error("Failed to fetch messages", error);
-            // Don't show toast on 404/empty history, just empty list
         } finally {
             setLoadingMessages(false);
         }
@@ -125,7 +122,7 @@ const Messages = () => {
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            <Navbar links={STUDENT_LINKS} />
+            <Navbar links={INSTRUCTOR_LINKS} />
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar - Inbox List */}
                 <div className="w-72 border-r bg-muted/20 flex flex-col">
@@ -140,17 +137,6 @@ const Messages = () => {
                             selectedUserId={activeRecipient?.id} 
                             onSelectConversation={handleSelectConversation}
                         />
-                    </div>
-                    <div className="p-3 border-t">
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full"
-                            onClick={() => navigate('/student/directory')}
-                        >
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            New Conversation
-                        </Button>
                     </div>
                 </div>
 
@@ -181,7 +167,7 @@ const Messages = () => {
                             {/* Messages List */}
                             <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
                                 {loadingMessages ? (
-                                    <div className="flex justify-center p-4">Returning messages...</div>
+                                    <div className="flex justify-center p-4">Loading messages...</div>
                                 ) : messages.length === 0 ? (
                                     <div className="text-center text-muted-foreground py-10">
                                         No messages yet. Say hello!
@@ -226,10 +212,7 @@ const Messages = () => {
                         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/10">
                             <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
                             <p className="text-lg font-medium">Select a conversation</p>
-                            <p className="text-sm mt-1">Choose from your inbox or start a new chat</p>
-                            <Button variant="link" onClick={() => navigate('/student/directory')}>
-                                Go to Faculty Directory
-                            </Button>
+                            <p className="text-sm mt-1">Choose from your inbox to view messages</p>
                         </div>
                     )}
                 </div>
@@ -238,4 +221,4 @@ const Messages = () => {
     );
 };
 
-export default Messages;
+export default InstructorMessages;
