@@ -10,13 +10,14 @@ const Asset = sequelize.define('Asset', {
     name: {
         type: DataTypes.STRING,
         allowNull: false,
+        defaultValue: 'Untitled Asset',
         validate: {
             notEmpty: { msg: 'Asset name is required' },
         },
     },
     assetTag: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         unique: true,
         validate: {
             notEmpty: { msg: 'Asset tag is required' },
