@@ -27,6 +27,7 @@ const AssetAllocationLog = require('./assetAllocationLogModel');
 const Compensation = require('./compensationModel');
 const LeaveRequest = require('./leaveRequestModel');
 const CompensationAuditLog = require('./compensationAuditLogModel');
+const DirectMessage = require('./directMessageModel');
 
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -206,6 +207,13 @@ CompensationAuditLog.belongsTo(Compensation, { foreignKey: 'compensationId', as:
 CompensationAuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 CompensationAuditLog.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
 
+// ===== Direct Message Associations =====
+User.hasMany(DirectMessage, { foreignKey: 'senderId', as: 'sentMessages' });
+DirectMessage.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
+
+User.hasMany(DirectMessage, { foreignKey: 'recipientId', as: 'receivedMessages' });
+DirectMessage.belongsTo(User, { foreignKey: 'recipientId', as: 'recipient' });
+
 module.exports = {
   sequelize,
   User,
@@ -235,4 +243,5 @@ module.exports = {
   Compensation,
   LeaveRequest,
   CompensationAuditLog,
+  DirectMessage,
 };

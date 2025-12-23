@@ -27,6 +27,7 @@ const applicationRoutes = require('./routes/applicationRoutes');
 const studentDocumentRoutes = require('./routes/studentDocumentRoutes');
 const assetRoutes = require('./routes/assetRoutes');
 const hrRoutes = require('./routes/hrRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 
@@ -63,6 +64,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/student-documents', studentDocumentRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/hr', hrRoutes);
+app.use('/api/messages', messageRoutes);
 
 const PORT = process.env.PORT || 3000;
 
