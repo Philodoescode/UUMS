@@ -63,17 +63,6 @@ interface User {
     email: string;
 }
 
-// Updated Interface to match new backend model
-interface AssetData {
-    assetName: string;
-    serialNumber: string;
-    type: 'Hardware' | 'Software';
-    purchaseDate: string;
-    value: number;
-    location: string;
-    description: string;
-}
-
 const AssetManagement = () => {
     const navigate = useNavigate();
     const [assets, setAssets] = useState<Asset[]>([]);
@@ -92,7 +81,7 @@ const AssetManagement = () => {
     const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
 
     // Form states
-    const [formData, setFormData] = useState<AssetData>({
+    const [formData, setFormData] = useState<CreateAssetData>({
         assetName: '',
         serialNumber: '',
         type: 'Hardware',
