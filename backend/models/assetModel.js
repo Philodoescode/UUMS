@@ -7,30 +7,44 @@ const Asset = sequelize.define('Asset', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
     },
-    name: {
+    assetName: {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
             notEmpty: { msg: 'Asset name is required' },
         },
     },
-    assetTag: {
+    serialNumber: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
         validate: {
-            notEmpty: { msg: 'Asset tag is required' },
+            notEmpty: { msg: 'Serial Number / License Key is required' },
         },
     },
-    category: {
-        type: DataTypes.ENUM('equipment', 'furniture', 'electronics', 'other'),
+    type: {
+        type: DataTypes.ENUM('Hardware', 'Software'),
         allowNull: false,
-        defaultValue: 'other',
+        defaultValue: 'Hardware',
     },
     status: {
-        type: DataTypes.ENUM('available', 'checked_out', 'maintenance', 'retired'),
+        type: DataTypes.ENUM('Available', 'In Use', 'Retired'),
         allowNull: false,
-        defaultValue: 'available',
+        defaultValue: 'Available',
+    },
+    purchaseDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+        validate: {
+            isDate: { msg: 'Purchase date must be a valid date' },
+        },
+    },
+    value: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        validate: {
+            min: 0,
+        },
     },
     currentHolderId: {
         type: DataTypes.UUID,

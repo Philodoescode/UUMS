@@ -53,9 +53,8 @@ import {
     type Asset,
     type CreateAssetData,
 } from '@/lib/assetService';
-
-// Fetch users for checkout dropdown
 import axios from 'axios';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 interface User {
@@ -64,13 +63,24 @@ interface User {
     email: string;
 }
 
+// Updated Interface to match new backend model
+interface AssetData {
+    assetName: string;
+    serialNumber: string;
+    type: 'Hardware' | 'Software';
+    purchaseDate: string;
+    value: number;
+    location: string;
+    description: string;
+}
+
 const AssetManagement = () => {
     const navigate = useNavigate();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [categoryFilter, setCategoryFilter] = useState<string>('all');
+    const [typeFilter, setTypeFilter] = useState<string>('all');
     const { toast } = useToast();
 
     // Dialog states
@@ -82,10 +92,12 @@ const AssetManagement = () => {
     const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
 
     // Form states
-    const [formData, setFormData] = useState<CreateAssetData>({
-        name: '',
-        assetTag: '',
-        category: 'other',
+    const [formData, setFormData] = useState<AssetData>({
+        assetName: '',
+        serialNumber: '',
+        type: 'Hardware',
+        purchaseDate: '',
+        value: 0,
         location: '',
         description: '',
     });
@@ -120,7 +132,7 @@ const AssetManagement = () => {
             console.error('Failed to fetch users', error);
             toast({
                 title: 'Error',
-                description: 'Failed to load users for checkout. Please try again.',
+                description: 'Failed to load users for checkout.',
                 variant: 'destructive',
             });
         }
@@ -136,11 +148,11 @@ const AssetManagement = () => {
         if (statusFilter !== 'all') {
             filtered = filtered.filter((a) => a.status === statusFilter);
         }
-        if (categoryFilter !== 'all') {
-            filtered = filtered.filter((a) => a.category === categoryFilter);
+        if (typeFilter !== 'all') {
+            filtered = filtered.filter((a) => a.type === typeFilter);
         }
         setFilteredAssets(filtered);
-    }, [statusFilter, categoryFilter, assets]);
+    }, [statusFilter, typeFilter, assets]);
 
     const handleCreate = async () => {
         try {
@@ -226,9 +238,11 @@ const AssetManagement = () => {
 
     const resetForm = () => {
         setFormData({
-            name: '',
-            assetTag: '',
-            category: 'other',
+            assetName: '',
+            serialNumber: '',
+            type: 'Hardware',
+            purchaseDate: '',
+            value: 0,
             location: '',
             description: '',
         });
@@ -238,9 +252,11 @@ const AssetManagement = () => {
     const openEditDialog = (asset: Asset) => {
         setSelectedAsset(asset);
         setFormData({
-            name: asset.name,
-            assetTag: asset.assetTag,
-            category: asset.category,
+            assetName: asset.assetName,
+            serialNumber: asset.serialNumber,
+            type: asset.type,
+            purchaseDate: asset.purchaseDate,
+            value: asset.value,
             location: asset.location || '',
             description: asset.description || '',
         });
@@ -254,29 +270,14 @@ const AssetManagement = () => {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'available':
+            case 'Available':
                 return <Badge className="bg-green-500 hover:bg-green-600">Available</Badge>;
-            case 'checked_out':
-                return <Badge className="bg-blue-500 hover:bg-blue-600">Checked Out</Badge>;
-            case 'maintenance':
-                return <Badge className="bg-orange-500 hover:bg-orange-600">Maintenance</Badge>;
-            case 'retired':
+            case 'In Use':
+                return <Badge className="bg-blue-500 hover:bg-blue-600">In Use</Badge>;
+            case 'Retired':
                 return <Badge variant="secondary">Retired</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
-        }
-    };
-
-    const getCategoryBadge = (category: string) => {
-        switch (category) {
-            case 'equipment':
-                return <Badge variant="outline">Equipment</Badge>;
-            case 'furniture':
-                return <Badge variant="outline">Furniture</Badge>;
-            case 'electronics':
-                return <Badge variant="outline">Electronics</Badge>;
-            default:
-                return <Badge variant="outline">Other</Badge>;
         }
     };
 
@@ -289,7 +290,7 @@ const AssetManagement = () => {
                         <div>
                             <h1 className="text-3xl font-bold">Asset Management</h1>
                             <p className="text-muted-foreground mt-1">
-                                Track and manage university assets
+                                Track and manage university assets (Hardware & Software)
                             </p>
                         </div>
                         <div className="flex items-center gap-4">
@@ -301,22 +302,19 @@ const AssetManagement = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Statuses</SelectItem>
-                                        <SelectItem value="available">Available</SelectItem>
-                                        <SelectItem value="checked_out">Checked Out</SelectItem>
-                                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                                        <SelectItem value="retired">Retired</SelectItem>
+                                        <SelectItem value="Available">Available</SelectItem>
+                                        <SelectItem value="In Use">In Use</SelectItem>
+                                        <SelectItem value="Retired">Retired</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                                <Select value={typeFilter} onValueChange={setTypeFilter}>
                                     <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Category" />
+                                        <SelectValue placeholder="Type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Categories</SelectItem>
-                                        <SelectItem value="equipment">Equipment</SelectItem>
-                                        <SelectItem value="furniture">Furniture</SelectItem>
-                                        <SelectItem value="electronics">Electronics</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="all">All Types</SelectItem>
+                                        <SelectItem value="Hardware">Hardware</SelectItem>
+                                        <SelectItem value="Software">Software</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -327,54 +325,76 @@ const AssetManagement = () => {
                                         Add Asset
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="max-w-2xl">
                                     <DialogHeader>
                                         <DialogTitle>Create New Asset</DialogTitle>
                                         <DialogDescription>
                                             Add a new asset to the inventory
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-2 gap-4 py-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="name">Name</Label>
+                                            <Label htmlFor="assetName">Asset Name *</Label>
                                             <Input
-                                                id="name"
-                                                value={formData.name}
+                                                id="assetName"
+                                                value={formData.assetName}
                                                 onChange={(e) =>
-                                                    setFormData({ ...formData, name: e.target.value })
+                                                    setFormData({ ...formData, assetName: e.target.value })
                                                 }
-                                                placeholder="Asset name"
+                                                placeholder="e.g., Dell Laptop"
                                             />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="assetTag">Asset Tag</Label>
+                                            <Label htmlFor="serialNumber">Serial Number / Key *</Label>
                                             <Input
-                                                id="assetTag"
-                                                value={formData.assetTag}
+                                                id="serialNumber"
+                                                value={formData.serialNumber}
                                                 onChange={(e) =>
-                                                    setFormData({ ...formData, assetTag: e.target.value })
+                                                    setFormData({ ...formData, serialNumber: e.target.value })
                                                 }
-                                                placeholder="Unique identifier (e.g., AST-001)"
+                                                placeholder="Unique Identifier"
                                             />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="category">Category</Label>
+                                            <Label htmlFor="type">Type *</Label>
                                             <Select
-                                                value={formData.category}
-                                                onValueChange={(v: 'equipment' | 'furniture' | 'electronics' | 'other') =>
-                                                    setFormData({ ...formData, category: v })
+                                                value={formData.type}
+                                                onValueChange={(v: 'Hardware' | 'Software') =>
+                                                    setFormData({ ...formData, type: v })
                                                 }
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="equipment">Equipment</SelectItem>
-                                                    <SelectItem value="furniture">Furniture</SelectItem>
-                                                    <SelectItem value="electronics">Electronics</SelectItem>
-                                                    <SelectItem value="other">Other</SelectItem>
+                                                    <SelectItem value="Hardware">Hardware</SelectItem>
+                                                    <SelectItem value="Software">Software</SelectItem>
                                                 </SelectContent>
                                             </Select>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="purchaseDate">Purchase Date *</Label>
+                                            <Input
+                                                id="purchaseDate"
+                                                type="date"
+                                                value={formData.purchaseDate}
+                                                onChange={(e) =>
+                                                    setFormData({ ...formData, purchaseDate: e.target.value })
+                                                }
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="value">Value ($) *</Label>
+                                            <Input
+                                                id="value"
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={formData.value}
+                                                onChange={(e) =>
+                                                    setFormData({ ...formData, value: parseFloat(e.target.value) })
+                                                }
+                                            />
                                         </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="location">Location</Label>
@@ -384,10 +404,10 @@ const AssetManagement = () => {
                                                 onChange={(e) =>
                                                     setFormData({ ...formData, location: e.target.value })
                                                 }
-                                                placeholder="Current location"
+                                                placeholder="e.g., Room 101"
                                             />
                                         </div>
-                                        <div className="grid gap-2">
+                                        <div className="grid gap-2 col-span-2">
                                             <Label htmlFor="description">Description</Label>
                                             <Textarea
                                                 id="description"
@@ -395,7 +415,7 @@ const AssetManagement = () => {
                                                 onChange={(e) =>
                                                     setFormData({ ...formData, description: e.target.value })
                                                 }
-                                                placeholder="Description (optional)"
+                                                placeholder="Optional details"
                                             />
                                         </div>
                                     </div>
@@ -414,12 +434,12 @@ const AssetManagement = () => {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Asset</TableHead>
-                                    <TableHead>Tag</TableHead>
-                                    <TableHead>Category</TableHead>
+                                    <TableHead>Asset Name</TableHead>
+                                    <TableHead>Serial/Key</TableHead>
+                                    <TableHead>Type</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Value</TableHead>
                                     <TableHead>Current Holder</TableHead>
-                                    <TableHead>Location</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -442,20 +462,21 @@ const AssetManagement = () => {
                                     filteredAssets.map((asset) => (
                                         <TableRow key={asset.id}>
                                             <TableCell>
-                                                <div className="font-medium">{asset.name}</div>
-                                                {asset.description && (
-                                                    <div className="text-sm text-muted-foreground truncate max-w-xs">
-                                                        {asset.description}
-                                                    </div>
-                                                )}
+                                                <div className="font-medium">{asset.assetName}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    By: {asset.purchaseDate}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <code className="text-sm bg-muted px-2 py-1 rounded">
-                                                    {asset.assetTag}
+                                                    {asset.serialNumber}
                                                 </code>
                                             </TableCell>
-                                            <TableCell>{getCategoryBadge(asset.category)}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{asset.type}</Badge>
+                                            </TableCell>
                                             <TableCell>{getStatusBadge(asset.status)}</TableCell>
+                                            <TableCell>${Number(asset.value).toFixed(2)}</TableCell>
                                             <TableCell>
                                                 {asset.currentHolder ? (
                                                     <div>
@@ -467,9 +488,6 @@ const AssetManagement = () => {
                                                 ) : (
                                                     <span className="text-muted-foreground">—</span>
                                                 )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {asset.location || <span className="text-muted-foreground">—</span>}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-1">
@@ -489,7 +507,7 @@ const AssetManagement = () => {
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
-                                                    {asset.status === 'available' && (
+                                                    {asset.status === 'Available' && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -499,7 +517,7 @@ const AssetManagement = () => {
                                                             <UserCheck className="h-4 w-4" />
                                                         </Button>
                                                     )}
-                                                    {asset.status === 'checked_out' && (
+                                                    {asset.status === 'In Use' && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -517,7 +535,7 @@ const AssetManagement = () => {
                                                             setDeleteDialogOpen(true);
                                                         }}
                                                         title="Delete"
-                                                        disabled={asset.status === 'checked_out'}
+                                                        disabled={asset.status === 'In Use'}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -534,44 +552,62 @@ const AssetManagement = () => {
 
             {/* Edit Dialog */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Edit Asset</DialogTitle>
                         <DialogDescription>Update asset information</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="edit-name">Name</Label>
+                            <Label htmlFor="edit-assetName">Asset Name *</Label>
                             <Input
-                                id="edit-name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                id="edit-assetName"
+                                value={formData.assetName}
+                                onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="edit-assetTag">Asset Tag</Label>
+                            <Label htmlFor="edit-serialNumber">Serial Number *</Label>
                             <Input
-                                id="edit-assetTag"
-                                value={formData.assetTag}
-                                onChange={(e) => setFormData({ ...formData, assetTag: e.target.value })}
+                                id="edit-serialNumber"
+                                value={formData.serialNumber}
+                                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="edit-category">Category</Label>
+                            <Label htmlFor="edit-type">Type *</Label>
                             <Select
-                                value={formData.category}
-                                onValueChange={(v: Asset['category']) => setFormData({ ...formData, category: v })}
+                                value={formData.type}
+                                onValueChange={(v: 'Hardware' | 'Software') => setFormData({ ...formData, type: v })}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="equipment">Equipment</SelectItem>
-                                    <SelectItem value="furniture">Furniture</SelectItem>
-                                    <SelectItem value="electronics">Electronics</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
+                                    <SelectItem value="Hardware">Hardware</SelectItem>
+                                    <SelectItem value="Software">Software</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-purchaseDate">Purchase Date *</Label>
+                            <Input
+                                id="edit-purchaseDate"
+                                type="date"
+                                value={formData.purchaseDate}
+                                onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-value">Value ($) *</Label>
+                            <Input
+                                id="edit-value"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={formData.value}
+                                onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) })}
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-location">Location</Label>
@@ -581,7 +617,7 @@ const AssetManagement = () => {
                                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                             />
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-2 col-span-2">
                             <Label htmlFor="edit-description">Description</Label>
                             <Textarea
                                 id="edit-description"
@@ -605,7 +641,7 @@ const AssetManagement = () => {
                     <DialogHeader>
                         <DialogTitle>Checkout Asset</DialogTitle>
                         <DialogDescription>
-                            Assign "{selectedAsset?.name}" to a user
+                            Assign "{selectedAsset?.assetName}" to a user
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -655,8 +691,8 @@ const AssetManagement = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => {
                                 setDeleteDialogOpen(false);
                                 setAssetToDelete(null);
