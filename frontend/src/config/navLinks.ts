@@ -67,3 +67,11 @@ export const HR_LINKS: NavLink[] = [
   { href: "/hr/employees", label: "Employees" },
   { href: "/hr/benefits", label: "Benefits & Insurance" },
 ];
+
+/**
+ * Parent Navbar
+ * Focused on monitoring child progress.
+ */
+export const PARENT_LINKS: NavLink[] = [
+  { href: "/parent/dashboard", label: "Dashboard" },
+];
