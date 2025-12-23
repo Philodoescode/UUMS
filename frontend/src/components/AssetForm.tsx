@@ -132,24 +132,22 @@ export function AssetForm({ initialData, onSubmit, onCancel, isSubmitting = fals
                     />
                 </div>
 
-                {initialData && (
-                    <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select
-                            value={formData.status}
-                            onValueChange={(value) => handleSelectChange('status', value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Available">Available</SelectItem>
-                                <SelectItem value="In Use">In Use</SelectItem>
-                                <SelectItem value="Retired">Retired</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                )}
+                <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                        value={formData.status}
+                        onValueChange={(value) => handleSelectChange('status', value)}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Available">Available</SelectItem>
+                            <SelectItem value="In Use">In Use</SelectItem>
+                            <SelectItem value="Retired">Retired</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
 
                 <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="location">Location</Label>
