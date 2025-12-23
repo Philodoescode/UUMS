@@ -13,11 +13,10 @@ const getAllAssets = async (req, res) => {
         const assets = await Asset.findAll({
             where,
             include: [
-                include: [
-                    { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
-                    { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] }
-                ],
-                order: [['createdAt', 'DESC']],
+                { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
+                { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] }
+            ],
+            order: [['createdAt', 'DESC']],
         });
 
         res.json(assets);
