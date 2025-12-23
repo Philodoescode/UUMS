@@ -35,9 +35,9 @@ import {
     createAsset,
     updateAsset,
     deleteAsset,
-    Asset,
-    CreateAssetData,
-    UpdateAssetData
+    type Asset,
+    type CreateAssetData,
+    type UpdateAssetData
 } from "@/lib/assetService";
 import { Plus, Pencil, Trash2, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -314,7 +314,7 @@ export default function AssetManagement() {
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => !open && setDeleteConfirmation(null)}>
+            <AlertDialog open={!!deleteConfirmation} onOpenChange={(open: boolean) => !open && setDeleteConfirmation(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>

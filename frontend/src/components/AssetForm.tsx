@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CreateAssetData, UpdateAssetData, Asset } from '@/lib/assetService';
+import type { CreateAssetData, UpdateAssetData, Asset } from '@/lib/assetService';
 
 interface AssetFormProps {
     initialData?: Asset;

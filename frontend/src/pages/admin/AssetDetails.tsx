@@ -172,7 +172,7 @@ const AssetDetails = () => {
                                 {getStatusBadge(asset.status)}
                             </div>
                         </div>
-                        {asset.status === 'checked_out' && (
+                        {asset.status === 'In Use' && (
                             <Button onClick={handleReturn}>
                                 <RotateCcw className="h-4 w-4 mr-2" />
                                 Return Asset
