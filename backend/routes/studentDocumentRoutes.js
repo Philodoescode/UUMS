@@ -13,4 +13,8 @@ router.post('/', protect, authorize('admin'), upload.single('file'), uploadDocum
 // Get documents for a specific student
 router.get('/:studentId', protect, authorize('admin', 'advisor'), getStudentDocuments);
 
+// Generate Transcript PDF
+const { generateTranscript } = require('../controllers/studentDocumentController');
+router.get('/:studentId/transcript', protect, authorize('admin'), generateTranscript);
+
 module.exports = router;

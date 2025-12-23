@@ -10,13 +10,14 @@ const Asset = sequelize.define('Asset', {
     assetName: {
         type: DataTypes.STRING,
         allowNull: false,
+        defaultValue: 'Untitled Asset',
         validate: {
             notEmpty: { msg: 'Asset name is required' },
         },
     },
     serialNumber: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         unique: true,
         validate: {
             notEmpty: { msg: 'Serial Number / License Key is required' },
