@@ -169,6 +169,46 @@ const seedDatabase = async () => {
       }
     }
 
+    // 6. Create user with both instructor and advisor roles for announcement testing
+    const instructorAdvisorUser = createdUsers['instructor@example.com'];
+    if (instructorAdvisorUser) {
+      const { UserRole } = require('../models');
+      
+      // Add instructor role to UserRole table (from primary roleId)
+      const existingInstructorRole = await UserRole.findOne({
+        where: {
+          userId: instructorAdvisorUser.id,
+          roleId: roleDocs['instructor']
+        }
+      });
+
+      if (!existingInstructorRole) {
+        await UserRole.create({
+          userId: instructorAdvisorUser.id,
+          roleId: roleDocs['instructor']
+        });
+        console.log(`Added instructor role to UserRole table for instructor@example.com`);
+      }
+
+      // Add advisor role to UserRole table
+      const existingAdvisorRole = await UserRole.findOne({
+        where: {
+          userId: instructorAdvisorUser.id,
+          roleId: roleDocs['advisor']
+        }
+      });
+
+      if (!existingAdvisorRole) {
+        await UserRole.create({
+          userId: instructorAdvisorUser.id,
+          roleId: roleDocs['advisor']
+        });
+        console.log(`Added advisor role to UserRole table for instructor@example.com`);
+      }
+
+      console.log(`instructor@example.com now has both instructor and advisor roles for announcement permissions`);
+    }
+
     console.log('Database Seeding Complete.');
   } catch (error) {
     console.error('Seeding Error:', error);

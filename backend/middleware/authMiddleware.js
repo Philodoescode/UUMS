@@ -14,7 +14,10 @@ const protect = async (req, res, next) => {
     // Attach user to request (exclude password)
     req.user = await User.findByPk(decoded.userId, {
       attributes: { exclude: ['password'] },
-      include: [{ model: Role, as: 'role' }],
+      include: [
+        { model: Role, as: 'role' },
+        { model: Role, as: 'roles', through: { attributes: [] } }
+      ],
     });
 
     if (!req.user) {

@@ -1,6 +1,7 @@
 const { sequelize } = require('../config/db');
 const User = require('./userModel');
 const Role = require('./roleModel');
+const UserRole = require('./userRoleModel');
 const Department = require('./departmentModel');
 const Course = require('./courseModel');
 const Instructor = require('./instructorModel');
@@ -13,6 +14,7 @@ const Assessment = require('./assessmentModel');
 
 const AssessmentSubmission = require('./assessmentSubmissionModel');
 const Announcement = require('./announcementModel');
+const UniversityAnnouncement = require('./universityAnnouncementModel');
 const ElectiveRequest = require('./electiveRequestModel');
 const Material = require('./materialModel');
 const Facility = require('./facilityModel');
@@ -29,6 +31,20 @@ const CompensationAuditLog = require('./compensationAuditLogModel');
 // ===== User & Role Associations =====
 User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
 Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+
+// Many-to-many relationship for multiple roles
+User.belongsToMany(Role, {
+  through: UserRole,
+  foreignKey: 'userId',
+  otherKey: 'roleId',
+  as: 'roles'
+});
+Role.belongsToMany(User, {
+  through: UserRole,
+  foreignKey: 'roleId',
+  otherKey: 'userId',
+  as: 'usersWithRole'
+});
 
 User.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(User, { foreignKey: 'createdById', as: 'createdUsers' });
@@ -117,6 +133,10 @@ Announcement.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 Instructor.hasMany(Announcement, { foreignKey: 'instructorId', as: 'announcements' });
 Announcement.belongsTo(Instructor, { foreignKey: 'instructorId', as: 'instructor' });
 
+// ===== University Announcement Associations =====
+User.hasMany(UniversityAnnouncement, { foreignKey: 'createdById', as: 'universityAnnouncements' });
+UniversityAnnouncement.belongsTo(User, { foreignKey: 'createdById', as: 'creator' });
+
 // ===== Elective Request Associations =====
 User.hasMany(ElectiveRequest, { foreignKey: 'studentId', as: 'electiveRequests' });
 ElectiveRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
@@ -190,6 +210,7 @@ module.exports = {
   sequelize,
   User,
   Role,
+  UserRole,
   Department,
   Course,
   Instructor,
@@ -201,6 +222,7 @@ module.exports = {
   Assessment,
   AssessmentSubmission,
   Announcement,
+  UniversityAnnouncement,
   ElectiveRequest,
   Material,
   Facility,
