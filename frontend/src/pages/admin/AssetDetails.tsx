@@ -165,10 +165,10 @@ const AssetDetails = () => {
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div className="flex-1">
-                            <h1 className="text-3xl font-bold">{asset.name}</h1>
+                            <h1 className="text-3xl font-bold">{asset.assetName}</h1>
                             <div className="flex items-center gap-2 mt-1">
-                                <code className="text-sm bg-muted px-2 py-1 rounded">{asset.assetTag}</code>
-                                {getCategoryBadge(asset.category)}
+                                <code className="text-sm bg-muted px-2 py-1 rounded">{asset.serialNumber}</code>
+                                {getCategoryBadge(asset.type)}
                                 {getStatusBadge(asset.status)}
                             </div>
                         </div>
