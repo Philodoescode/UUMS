@@ -24,13 +24,15 @@ export interface AssetAllocationLog {
 
 export interface Asset {
     id: string;
-    name: string;
-    assetTag: string;
-    category: 'equipment' | 'furniture' | 'electronics' | 'other';
-    status: 'available' | 'checked_out' | 'maintenance' | 'retired';
+    assetName: string;
+    serialNumber: string;
+    type: 'Hardware' | 'Software';
+    status: 'Available' | 'In Use' | 'Retired';
     currentHolderId?: string;
     location?: string;
     description?: string;
+    purchaseDate: string;
+    value: number;
     createdAt: string;
     updatedAt: string;
     currentHolder?: User;
@@ -38,25 +40,29 @@ export interface Asset {
 }
 
 export interface CreateAssetData {
-    name: string;
-    assetTag: string;
-    category?: 'equipment' | 'furniture' | 'electronics' | 'other';
+    assetName: string;
+    serialNumber: string;
+    type: 'Hardware' | 'Software';
+    purchaseDate: string;
+    value: number;
     location?: string;
     description?: string;
 }
 
 export interface UpdateAssetData {
-    name?: string;
-    assetTag?: string;
-    category?: 'equipment' | 'furniture' | 'electronics' | 'other';
-    status?: 'available' | 'checked_out' | 'maintenance' | 'retired';
+    assetName?: string;
+    serialNumber?: string;
+    type?: 'Hardware' | 'Software';
+    status?: 'Available' | 'In Use' | 'Retired';
+    purchaseDate?: string;
+    value?: number;
     location?: string;
     description?: string;
 }
 
 // ===== API Functions =====
 
-export const getAllAssets = async (params?: { status?: string; category?: string }): Promise<Asset[]> => {
+export const getAllAssets = async (params?: { status?: string; type?: string }): Promise<Asset[]> => {
     const response = await axios.get(`${API_BASE_URL}/api/assets`, {
         params,
         withCredentials: true,
