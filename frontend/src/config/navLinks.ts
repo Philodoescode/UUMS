@@ -42,6 +42,16 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
 ];
 
 /**
+ * TA Navbar
+ * For Teaching Assistants to manage their assigned duties.
+ */
+export const TA_LINKS: NavLink[] = [
+  { href: "/ta/dashboard", label: "Dashboard" },
+  { href: "/ta/my-courses", label: "My Courses" },
+  { href: "/ta/messages", label: "Messages" },
+];
+
+/**
  * Student Navbar
  * Tailored specifically to the student's needs, providing access to
  * academic information, campus resources, and community features.

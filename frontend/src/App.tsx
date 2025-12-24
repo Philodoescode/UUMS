@@ -13,6 +13,8 @@ import FacilityCalendar from "@/pages/admin/FacilityCalendar"
 import AdmissionManagement from "@/pages/admin/AdmissionManagement"
 import Announcements from "@/pages/admin/Announcements"
 import InstructorDashboard from "@/pages/instructor/Dashboard"
+import MyCourses from "@/pages/instructor/MyCourses"
+import CourseDashboard from "@/pages/instructor/CourseDashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import InstructorMessages from "@/pages/instructor/Messages"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
@@ -27,6 +29,8 @@ import Messages from "./pages/student/Messages";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
 import TADashboard from "@/pages/ta/Dashboard";
+import TAMyCourses from "@/pages/ta/MyCourses";
+import TACourseDashboard from "@/pages/ta/CourseDashboard";
 import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
@@ -78,6 +82,8 @@ function App() {
             {/* Redirect /instructor to /instructor/dashboard */}
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+            <Route path="/instructor/my-courses" element={<MyCourses />} />
+            <Route path="/instructor/course/:courseId" element={<CourseDashboard />} />
             <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
@@ -88,6 +94,8 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
             <Route path="/ta" element={<Navigate to="/ta/dashboard" replace />} />
             <Route path="/ta/dashboard" element={<TADashboard />} />
+            <Route path="/ta/my-courses" element={<TAMyCourses />} />
+            <Route path="/ta/course/:assignmentId" element={<TACourseDashboard />} />
           </Route>
 
           {/* HR Routes */}
