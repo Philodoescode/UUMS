@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
-import { MessageSquare, Mail, User as UserIcon, MapPin, Clock, Award } from "lucide-react";
+import { MessageSquare, Mail, User as UserIcon, MapPin, Clock, Award, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import RequestMeetingDialog from "@/components/RequestMeetingDialog";
 
 interface InstructorProfile {
   id: string;
@@ -31,6 +32,7 @@ interface User {
 const FacultyDirectory = () => {
   const [faculty, setFaculty] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProfessor, setSelectedProfessor] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -57,6 +59,14 @@ const FacultyDirectory = () => {
 
   const handleMessage = (userId: string) => {
     navigate(`/student/messages?recipientId=${userId}`);
+  };
+
+  const handleRequestMeeting = (userId: string, userName: string) => {
+    setSelectedProfessor({ id: userId, name: userName });
+  };
+
+  const handleCloseMeetingDialog = () => {
+    setSelectedProfessor(null);
   };
 
   const getInitials = (name: string) => {
@@ -163,9 +173,17 @@ const FacultyDirectory = () => {
                         </div>
                       )}
                     </CardContent>
-                    <CardFooter className="bg-muted/50 p-4 pt-4">
+                    <CardFooter className="bg-muted/50 p-4 pt-4 flex gap-2">
                       <Button
-                        className="w-full"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleRequestMeeting(user.id, user.fullName)}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Request Meeting
+                      </Button>
+                      <Button
+                        className="flex-1"
                         onClick={() => handleMessage(user.id)}
                       >
                         <MessageSquare className="mr-2 h-4 w-4" />
@@ -179,6 +197,16 @@ const FacultyDirectory = () => {
           )}
         </div>
       </main>
+
+      {/* Meeting Request Dialog */}
+      {selectedProfessor && (
+        <RequestMeetingDialog
+          isOpen={true}
+          onClose={handleCloseMeetingDialog}
+          professorId={selectedProfessor.id}
+          professorName={selectedProfessor.name}
+        />
+      )}
     </div>
   );
 };
