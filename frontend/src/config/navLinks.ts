@@ -57,6 +57,7 @@ export const TA_LINKS: NavLink[] = [
   { href: "/ta/leave-requests", label: "Leave Requests" },
   { href: "/ta/benefits", label: "Benefits & Insurance" },
   { href: "/ta/messages", label: "Messages" },
+  { href: "/ta/performance", label: "Performance" },
   { href: "/ta/payroll", label: "Payroll/Compensation" },
 ];
 

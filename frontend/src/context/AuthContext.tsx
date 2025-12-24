@@ -3,10 +3,11 @@ import api from '@/lib/api';
 
 // Types
 interface User {
-  _id: string;
+  id: string; // Updated to match Sequelize default
+  _id?: string; // Kept for potential compatibility or legacy
   fullName: string;
   email: string;
-  role: 'admin' | 'instructor' | 'student' | 'hr' | 'ta';
+  role: 'admin' | 'instructor' | 'student' | 'hr' | 'ta' | 'advisor';
 }
 
 interface AuthContextType {

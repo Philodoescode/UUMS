@@ -109,6 +109,32 @@ const createFeedback = async (req, res) => {
     }
 };
 
+
+
+// @desc    Get feedback for the logged-in user (TA or Instructor)
+// @route   GET /api/student-feedback/my-feedback
+const getMyFeedback = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const feedback = await StudentFeedback.findAll({
+            where: { targetUserId: userId },
+            include: [{
+                model: Course,
+                as: 'course',
+                attributes: ['courseCode', 'name']
+            }],
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json(feedback);
+    } catch (error) {
+        console.error('Error fetching feedback:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
-    createFeedback
+    createFeedback,
+    getMyFeedback
 };
