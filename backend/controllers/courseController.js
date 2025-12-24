@@ -1,4 +1,4 @@
-const { Course, Department, Instructor, User, CourseInstructor } = require('../models');
+const { Course, Department, Instructor, User, CourseInstructor, CourseTAAssignment } = require('../models');
 
 // @desc    Create a new course
 // @route   POST /api/courses
@@ -105,6 +105,11 @@ const getCourseById = async (req, res) => {
       include: [
         { model: Department, as: 'department' },
         { model: Course, as: 'prerequisites', attributes: ['id', 'courseCode', 'name'] },
+        {
+          model: CourseTAAssignment,
+          as: 'taAssignments',
+          include: [{ model: User, as: 'taUser', attributes: ['id', 'fullName', 'email'] }],
+        },
       ],
     });
 

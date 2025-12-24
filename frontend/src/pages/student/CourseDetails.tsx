@@ -55,11 +55,22 @@ interface Course {
     instructors?: {
         id: string;
         user: {
+            id: string; // Needed for rating target
             fullName: string;
         };
         isPrimary: boolean;
     }[];
+    taAssignments?: {
+        id: string;
+        taUser: {
+            id: string;
+            fullName: string;
+            email: string;
+        };
+        duties: string;
+    }[];
 }
+
 
 interface GradeInfo {
     grade: string | null;
@@ -78,6 +89,8 @@ interface Appeal {
     createdAt: string;
     resolvedAt: string | null;
 }
+
+import { StudentRatingDialog } from "@/components/StudentRatingDialog";
 
 const CourseDetails = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -322,6 +335,11 @@ const CourseDetails = () => {
                                     Instructor(s): {course.instructors.map(i => i.user.fullName).join(", ")}
                                 </p>
                             )}
+                            {course.taAssignments && course.taAssignments.length > 0 && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Teaching Assistant(s): {course.taAssignments.map(ta => ta.taUser.fullName).join(", ")}
+                                </p>
+                            )}
                         </CardHeader>
                         <CardContent>
                             {/* Course Info Grid */}
@@ -355,6 +373,39 @@ const CourseDetails = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Teaching Assistants Section with Rating */}
+                            {course.taAssignments && course.taAssignments.length > 0 && (
+                                <>
+                                    <Separator className="my-6" />
+                                    <div className="mb-6">
+                                        <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
+                                            <UsersIcon className="size-5" />
+                                            Teaching Assistants
+                                        </h3>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            {course.taAssignments.map((ta) => (
+                                                <div key={ta.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                                                    <div>
+                                                        <p className="font-semibold">{ta.taUser.fullName}</p>
+                                                        <p className="text-sm text-muted-foreground">{ta.taUser.email}</p>
+                                                    </div>
+                                                    <StudentRatingDialog
+                                                        courseId={course.id}
+                                                        targetUser={{
+                                                            id: ta.taUser.id,
+                                                            fullName: ta.taUser.fullName,
+                                                            role: 'TA'
+                                                        }}
+                                                        semester={course.semester}
+                                                        year={course.year}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <Separator className="my-6" />
 
