@@ -85,6 +85,7 @@ export const HR_LINKS: NavLink[] = [
   { href: "/hr/dashboard", label: "Dashboard" },
   { href: "/hr/announcements", label: "Announcements" },
   { href: "/hr/employees", label: "Employees" },
+  { href: "/hr/professional-development", label: "Professional Development" },
 ];
 
 /**

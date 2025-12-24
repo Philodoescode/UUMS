@@ -36,6 +36,7 @@ const staffBenefitsRoutes = require('./routes/staffBenefitsRoutes');
 const meetingRequestRoutes = require('./routes/meetingRequestRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const professionalDevelopmentRoutes = require('./routes/professionalDevelopmentRoutes');
 
 
 const app = express();
@@ -83,6 +84,7 @@ app.use('/api/staff', staffBenefitsRoutes);
 app.use('/api/meeting-requests', meetingRequestRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/professional-development', professionalDevelopmentRoutes);
 
 const PORT = process.env.PORT || 3000;
 

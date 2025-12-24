@@ -36,6 +36,7 @@ const BenefitsAuditLog = require('./benefitsAuditLogModel');
 const MeetingRequest = require('./meetingRequestModel');
 const Payslip = require('./payslipModel');
 const StudentFeedback = require('./studentFeedbackModel');
+const ProfessionalDevelopment = require('./professionalDevelopmentModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -288,6 +289,10 @@ StudentFeedback.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 User.hasMany(StudentFeedback, { foreignKey: 'targetUserId', as: 'receivedFeedback' });
 StudentFeedback.belongsTo(User, { foreignKey: 'targetUserId', as: 'targetUser' });
 
+// ===== Professional Development Associations =====
+User.hasMany(ProfessionalDevelopment, { foreignKey: 'userId', as: 'professionalDevelopment' });
+ProfessionalDevelopment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 module.exports = {
   sequelize,
   User,
@@ -326,4 +331,5 @@ module.exports = {
   MeetingRequest,
   Payslip,
   StudentFeedback,
+  ProfessionalDevelopment,
 };
