@@ -42,6 +42,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/meeting-requests", label: "Meeting Requests" },
   { href: "/instructor/leave-requests", label: "Leave Requests" },
   { href: "/instructor/benefits", label: "Benefits & Insurance" },
+  { href: "/instructor/payroll", label: "Payroll/Compensation" },
   { href: "/instructor/maintenance", label: "Maintenance" },
 ];
 
@@ -56,6 +57,7 @@ export const TA_LINKS: NavLink[] = [
   { href: "/ta/leave-requests", label: "Leave Requests" },
   { href: "/ta/benefits", label: "Benefits & Insurance" },
   { href: "/ta/messages", label: "Messages" },
+  { href: "/ta/payroll", label: "Payroll/Compensation" },
 ];
 
 /**

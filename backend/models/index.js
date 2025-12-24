@@ -34,6 +34,7 @@ const CourseTAAssignment = require('./courseTAAssignmentModel');
 const StaffBenefits = require('./staffBenefitsModel');
 const BenefitsAuditLog = require('./benefitsAuditLogModel');
 const MeetingRequest = require('./meetingRequestModel');
+const Payslip = require('./payslipModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -276,6 +277,10 @@ MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 User.hasMany(MeetingRequest, { foreignKey: 'professorId', as: 'receivedMeetingRequests' });
 MeetingRequest.belongsTo(User, { foreignKey: 'professorId', as: 'professor' });
 
+// ===== Payslip Associations =====
+User.hasMany(Payslip, { foreignKey: 'userId', as: 'payslips' });
+Payslip.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 module.exports = {
   sequelize,
   User,
@@ -312,4 +317,5 @@ module.exports = {
   StaffBenefits,
   BenefitsAuditLog,
   MeetingRequest,
+  Payslip,
 };
