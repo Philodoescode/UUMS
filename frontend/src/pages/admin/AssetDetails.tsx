@@ -219,7 +219,17 @@ const AssetDetails = () => {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {asset.currentHolder ? (
+                                {asset.type === 'Software' ? (
+                                    <div>
+                                        <p className="text-lg font-medium">
+                                            {asset.seatsAvailable} / {asset.totalSeats}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">Seats Available</p>
+                                        <Badge variant={asset.seatsAvailable! > 0 ? "secondary" : "destructive"} className="mt-1">
+                                            {asset.seatsAvailable! > 0 ? 'Available' : 'No Seats'}
+                                        </Badge>
+                                    </div>
+                                ) : asset.currentHolder ? (
                                     <div>
                                         <p className="text-lg font-medium">{asset.currentHolder.fullName}</p>
                                         <p className="text-sm text-muted-foreground">{asset.currentHolder.email}</p>

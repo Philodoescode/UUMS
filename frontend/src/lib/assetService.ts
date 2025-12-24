@@ -44,6 +44,8 @@ export interface Asset {
     description?: string;
     purchaseDate: string;
     value: number;
+    totalSeats?: number;
+    seatsAvailable?: number;
     createdAt: string;
     updatedAt: string;
     currentHolder?: {
@@ -63,23 +65,15 @@ export interface CreateAssetData {
     assetName: string;
     serialNumber: string;
     type: 'Hardware' | 'Software';
+    status?: 'Available' | 'In Use' | 'Retired';
     purchaseDate: string;
-    value: number;
+    value: number | string;
     location?: string;
     description?: string;
-    status?: 'Available' | 'In Use' | 'Retired';
+    totalSeats?: number;
 }
 
-export interface UpdateAssetData {
-    assetName?: string;
-    serialNumber?: string;
-    type?: 'Hardware' | 'Software';
-    status?: 'Available' | 'In Use' | 'Retired';
-    purchaseDate?: string;
-    value?: number;
-    location?: string;
-    description?: string;
-}
+export interface UpdateAssetData extends Partial<CreateAssetData> { }
 
 // ===== API Functions =====
 

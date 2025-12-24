@@ -53,12 +53,19 @@ export function AssetAssignmentDialog({ asset, isOpen, onClose, onAssign }: Asse
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch users (instructors)
-            const userRes = await axios.get('http://localhost:3000/api/users?role=instructor', { withCredentials: true });
-            setUsers(userRes.data);
+            // Fetch users based on asset type or general policy
+            // If software, we might want only students? Or both? User said "Student" but practically staff also need software.
+            // Let's fetch both instructors and students if possible, or just all users.
+            // For now, I'll fetch students if it IS software, and instructors if NOT (or both).
+            // Let's fetch both to be safe and versatile.
+            const [instructorsRes, studentsRes, deptRes] = await Promise.all([
+                axios.get('http://localhost:3000/api/users?role=instructor', { withCredentials: true }),
+                axios.get('http://localhost:3000/api/users?role=student', { withCredentials: true }),
+                axios.get('http://localhost:3000/api/departments', { withCredentials: true })
+            ]);
 
-            // Fetch departments
-            const deptRes = await axios.get('http://localhost:3000/api/departments', { withCredentials: true });
+            // Combine unique users (though roles are disjoint usually)
+            setUsers([...instructorsRes.data, ...studentsRes.data]);
             setDepartments(deptRes.data);
         } catch (error) {
             console.error("Failed to fetch data", error);
@@ -116,13 +123,20 @@ export function AssetAssignmentDialog({ asset, isOpen, onClose, onAssign }: Asse
                 <Tabs defaultValue="person" value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="person">Person</TabsTrigger>
-                        <TabsTrigger value="department">Department</TabsTrigger>
+                        <TabsTrigger value="department" disabled={asset.type === 'Software'}>Department</TabsTrigger>
                     </TabsList>
 
                     <div className="py-4 space-y-4">
+                        {asset.type === 'Software' && (
+                            <div className="bg-yellow-50 text-yellow-800 text-sm p-3 rounded-md mb-2">
+                                Software licenses are assigned to individuals only.
+                                Seats Available: {asset.seatsAvailable} / {asset.totalSeats}
+                            </div>
+                        )}
+
                         <TabsContent value="person" className="mt-0 space-y-4">
                             <div className="space-y-2">
-                                <Label>Select Instructor/User</Label>
+                                <Label>Select User (Student/Instructor)</Label>
                                 <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={loading}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a user" />

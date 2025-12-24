@@ -20,7 +20,7 @@ interface AssetFormProps {
 }
 
 export function AssetForm({ initialData, onSubmit, onCancel, isSubmitting = false }: AssetFormProps) {
-    const [formData, setFormData] = useState<CreateAssetData & { status?: string }>({
+    const [formData, setFormData] = useState<CreateAssetData & { status?: string; totalSeats?: number }>({
         assetName: '',
         serialNumber: '',
         type: 'Hardware',
@@ -29,6 +29,7 @@ export function AssetForm({ initialData, onSubmit, onCancel, isSubmitting = fals
         location: '',
         description: '',
         status: 'Available',
+        totalSeats: 1, // Default for software
     });
 
     useEffect(() => {
@@ -42,6 +43,7 @@ export function AssetForm({ initialData, onSubmit, onCancel, isSubmitting = fals
                 location: initialData.location || '',
                 description: initialData.description || '',
                 status: initialData.status,
+                totalSeats: initialData.totalSeats || 1, // Set totalSeats from initialData or default to 1
             });
         }
     }, [initialData]);
@@ -90,20 +92,36 @@ export function AssetForm({ initialData, onSubmit, onCancel, isSubmitting = fals
                     />
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="type">Type</Label>
-                    <Select
-                        value={formData.type}
-                        onValueChange={(value) => handleSelectChange('type', value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Hardware">Hardware</SelectItem>
-                            <SelectItem value="Software">Software</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div className={`grid grid-cols-1 ${formData.type === 'Software' ? 'md:grid-cols-2' : ''} gap-4`}>
+                    <div className="space-y-2">
+                        <Label htmlFor="type">Type</Label>
+                        <Select
+                            value={formData.type}
+                            onValueChange={(value: 'Hardware' | 'Software') => setFormData({ ...formData, type: value })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Hardware">Hardware</SelectItem>
+                                <SelectItem value="Software">Software</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {formData.type === 'Software' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="totalSeats">Total Seats</Label>
+                            <Input
+                                id="totalSeats"
+                                type="number"
+                                min="1"
+                                value={formData.totalSeats}
+                                onChange={(e) => setFormData({ ...formData, totalSeats: parseInt(e.target.value) || 1 })}
+                                required
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-2">
