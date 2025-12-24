@@ -32,7 +32,9 @@ import TADashboard from "@/pages/ta/Dashboard";
 import TAMyCourses from "@/pages/ta/MyCourses";
 import TACourseDashboard from "@/pages/ta/CourseDashboard";
 import TAProfile from "@/pages/ta/Profile";
+import TALeaveRequests from "@/pages/ta/LeaveRequests";
 import InstructorProfile from "@/pages/instructor/Profile";
+import InstructorLeaveRequests from "@/pages/instructor/LeaveRequests";
 import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
@@ -91,6 +93,7 @@ function App() {
             <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
+            <Route path="/instructor/leave-requests" element={<InstructorLeaveRequests />} />
             <Route path="/instructor/messages" element={<InstructorMessages />} />
           </Route>
 
@@ -101,6 +104,7 @@ function App() {
             <Route path="/ta/my-courses" element={<TAMyCourses />} />
             <Route path="/ta/course/:assignmentId" element={<TACourseDashboard />} />
             <Route path="/ta/profile" element={<TAProfile />} />
+            <Route path="/ta/leave-requests" element={<TALeaveRequests />} />
           </Route>
 
           {/* HR Routes */}
