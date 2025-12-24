@@ -116,7 +116,7 @@ export function AssetAssignmentDialog({ asset, isOpen, onClose, onAssign }: Asse
                 <DialogHeader>
                     <DialogTitle>Assign Asset</DialogTitle>
                     <DialogDescription>
-                        Assign {asset.assetName} to a person or department.
+                        Assign {asset.assetName} to {asset.type === 'Software' ? 'a student or instructor.' : 'a person or department.'}
                     </DialogDescription>
                 </DialogHeader>
 
