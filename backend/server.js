@@ -29,7 +29,9 @@ const assetRoutes = require('./routes/assetRoutes');
 const hrRoutes = require('./routes/hrRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const parentRoutes = require('./routes/parentRoutes');
+const taAssignmentRoutes = require('./routes/taAssignmentRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
 
 
 const app = express();
@@ -69,7 +71,9 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/parent', parentRoutes);
+app.use('/api/ta-assignments', taAssignmentRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/leave-requests', leaveRoutes);
 
 const PORT = process.env.PORT || 3000;
 

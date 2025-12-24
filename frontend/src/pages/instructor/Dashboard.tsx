@@ -1,41 +1,58 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { INSTRUCTOR_LINKS } from "@/config/navLinks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { InstructorAssessmentList } from "@/components/InstructorAssessmentList";
-import { InstructorAnnouncements } from "@/components/InstructorAnnouncements";
-import { InstructorGradeAppeals } from "@/components/InstructorGradeAppeals";
-import InstructorMaterialManagement from "@/components/InstructorMaterialManagement";
-import api from "@/lib/api";
-import { BookOpenIcon, RefreshCwIcon } from "lucide-react";
-
-interface Course {
-  id: string;
-  courseCode: string;
-  name: string;
-  semester: string;
-  year: number;
-}
+import { Button } from "@/components/ui/button";
+import {
+  BookOpenIcon,
+  ClipboardListIcon,
+  MegaphoneIcon,
+  MessageSquareIcon,
+  WrenchIcon,
+} from "lucide-react";
 
 const InstructorDashboard = () => {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await api.get("/instructor-portal/my-courses");
-        setCourses(response.data);
-      } catch (error) {
-        console.error("Failed to fetch courses", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCourses();
-  }, []);
+  const quickLinks = [
+    {
+      title: "My Courses",
+      description: "View and manage all your assigned courses",
+      icon: BookOpenIcon,
+      href: "/instructor/my-courses",
+      color: "bg-blue-500/10 text-blue-600",
+    },
+    {
+      title: "Grade Management",
+      description: "Manage student grades and view grade history",
+      icon: ClipboardListIcon,
+      href: "/instructor/grades",
+      color: "bg-green-500/10 text-green-600",
+    },
+    {
+      title: "Announcements",
+      description: "Post and manage announcements",
+      icon: MegaphoneIcon,
+      href: "/instructor/announcements",
+      color: "bg-purple-500/10 text-purple-600",
+    },
+    {
+      title: "Messages",
+      description: "View and send messages to students",
+      icon: MessageSquareIcon,
+      href: "/instructor/messages",
+      color: "bg-orange-500/10 text-orange-600",
+    },
+    {
+      title: "Maintenance Requests",
+      description: "Report and track maintenance issues",
+      icon: WrenchIcon,
+      href: "/instructor/maintenance",
+      color: "bg-red-500/10 text-red-600",
+    },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -45,8 +62,10 @@ const InstructorDashboard = () => {
           {/* Welcome Section */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Instructor Dashboard</h1>
-              <p className="text-muted-foreground">Manage your courses and assessments</p>
+              <h1 className="text-3xl font-bold">Welcome back, {user?.fullName?.split(' ')[0] || 'Instructor'}!</h1>
+              <p className="text-muted-foreground">
+                Instructor Dashboard - Manage your courses and connect with students
+              </p>
             </div>
             <div className="text-right text-sm">
               <p className="font-medium">{user?.fullName}</p>
@@ -54,52 +73,58 @@ const InstructorDashboard = () => {
             </div>
           </div>
 
-          {/* Courses & Assessments Grid */}
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <RefreshCwIcon className="size-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : courses.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <BookOpenIcon className="size-12 mx-auto mb-4 opacity-50" />
-              <p>You are not assigned to any courses yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {courses.map(course => (
-                <Card key={course.id} className="flex flex-col h-full">
-                  <CardHeader className="bg-muted/30 pb-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{course.courseCode}</CardTitle>
-                        <CardDescription>{course.name}</CardDescription>
-                      </div>
-                      <span className="text-xs font-medium bg-background px-2 py-1 rounded border">
-                        {course.semester} {course.year}
-                      </span>
+          {/* Quick Actions Card */}
+          <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpenIcon className="size-5" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>
+                Access your most used features quickly
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {quickLinks.map((link) => (
+                  <Button
+                    key={link.href}
+                    variant="outline"
+                    className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-accent justify-start"
+                    onClick={() => navigate(link.href)}
+                  >
+                    <div className={`p-2 rounded-lg ${link.color}`}>
+                      <link.icon className="size-5" />
                     </div>
-                  </CardHeader>
-                  <CardContent className="flex-grow pt-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      Assessments
-                    </h3>
-                    <InstructorAssessmentList courseId={course.id} />
+                    <div className="text-left">
+                      <p className="font-medium">{link.title}</p>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        {link.description}
+                      </p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-                    <div className="my-6 border-t pt-6"></div>
-                    <InstructorMaterialManagement courseId={course.id} />
-
-                    <div className="my-6 border-t pt-6"></div>
-
-                    <InstructorAnnouncements courseId={course.id} />
-
-                    <div className="my-6 border-t pt-6"></div>
-
-                    <InstructorGradeAppeals courseId={course.id} />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          {/* Getting Started Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Getting Started</CardTitle>
+              <CardDescription>
+                Start managing your courses by clicking on "My Courses" above or in the navigation menu.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center py-8">
+                <Button size="lg" onClick={() => navigate("/instructor/my-courses")}>
+                  <BookOpenIcon className="mr-2 size-5" />
+                  Go to My Courses
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>

@@ -12,6 +12,7 @@ import {
     RotateCcw,
     LogIn,
     LogOut,
+    Layers,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { ADMIN_LINKS } from '@/config/navLinks';
@@ -35,6 +36,7 @@ import {
 } from '@/lib/assetService';
 import { AssetAssignmentDialog } from '@/components/AssetAssignmentDialog';
 import { Building } from 'lucide-react';
+import axios from 'axios';
 
 const AssetDetails = () => {
     const { id } = useParams<{ id: string }>();
@@ -72,16 +74,47 @@ const AssetDetails = () => {
     }, [fetchAsset]);
 
     const handleReturn = async () => {
-        if (!asset) return;
+        if (!confirm('Are you sure you want to return this asset?')) return;
+
         try {
-            await returnAsset(asset.id);
-            toast({ title: 'Success', description: 'Asset returned successfully' });
+            await returnAsset(asset!.id);
+            toast({ title: "Success", description: "Asset returned successfully" });
+            fetchAsset();
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to return asset",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleReturnSoftware = async (userId?: string, departmentId?: string) => {
+        if (!confirm('Are you sure you want to revoke this license?')) return;
+
+        try {
+            // We need to pass the userId or departmentId to the return endpoint
+            // The service function might need to be updated to accept a body, but 
+            // the backend expects it.
+            // Let's assume returnAsset service can take a second argument (notes) or object?
+            // Checking assetService.ts: returnAsset(id, notes)
+            // It doesn't allow passing extra body args easily without modification.
+            // I should modify assetService to accept an object or update the call here to use raw axios or update service.
+            // Let's just update the service call here assuming I'll fix service.
+            // Actually, I'll direct call axios here to be quick/safe or update service.
+            // Updating service is better.
+            await axios.post(`http://localhost:3000/api/assets/${asset!.id}/return`, {
+                userId,
+                departmentId
+            }, { withCredentials: true });
+
+            toast({ title: "Success", description: "License revoked successfully" });
             fetchAsset();
         } catch (error: any) {
             toast({
-                title: 'Error',
-                description: error.response?.data?.message || 'Failed to return asset',
-                variant: 'destructive',
+                title: "Error",
+                description: error.response?.data?.message || "Failed to revoke license",
+                variant: "destructive"
             });
         }
     };
@@ -181,7 +214,7 @@ const AssetDetails = () => {
                                 {getStatusBadge(asset.status)}
                             </div>
                         </div>
-                        {asset.status === 'In Use' && (
+                        {asset.status === 'In Use' && asset.type !== 'Software' && (
                             <Button onClick={handleReturn}>
                                 <RotateCcw className="h-4 w-4 mr-2" />
                                 Return Asset
@@ -214,12 +247,67 @@ const AssetDetails = () => {
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    Current Holder
+                                    {asset.type === 'Software' ? <Layers className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                                    {asset.type === 'Software' ? 'License Allocation' : 'Current Holder'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {asset.currentHolder ? (
+                                {asset.type === 'Software' ? (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <p className="text-lg font-medium">
+                                                {asset.seatsAvailable} / {asset.totalSeats}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">Seats Available</p>
+                                            <Badge variant={asset.seatsAvailable! > 0 ? "secondary" : "destructive"} className="mt-1">
+                                                {asset.seatsAvailable! > 0 ? 'Available' : 'No Seats'}
+                                            </Badge>
+                                        </div>
+
+                                        <div className="border-t pt-4">
+                                            <h4 className="text-sm font-semibold mb-2">Allocated Licenses</h4>
+                                            {asset.licenses && asset.licenses.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {asset.licenses.filter((l: any) => l.status === 'Active').map((license: any) => (
+                                                        <div key={license.id} className="flex justify-between items-center bg-muted p-2 rounded text-sm">
+                                                            <div>
+                                                                {license.user ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <User className="h-3 w-3" />
+                                                                        <span className="font-medium">{license.user.fullName}</span>
+                                                                    </div>
+                                                                ) : license.department ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Building className="h-3 w-3" />
+                                                                        <span className="font-medium">{license.department.name}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span>Unknown Holder</span>
+                                                                )}
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {new Date(license.assignedDate).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                onClick={() => handleReturnSoftware(license.userId, license.departmentId)}
+                                                            >
+                                                                <RotateCcw className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                    {asset.licenses.filter((l: any) => l.status === 'Active').length === 0 && (
+                                                        <p className="text-sm text-muted-foreground italic">No active assignments</p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">No licenses assigned yet.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : asset.currentHolder ? (
                                     <div>
                                         <p className="text-lg font-medium">{asset.currentHolder.fullName}</p>
                                         <p className="text-sm text-muted-foreground">{asset.currentHolder.email}</p>
