@@ -34,6 +34,7 @@ const CourseTAAssignment = require('./courseTAAssignmentModel');
 const StaffBenefits = require('./staffBenefitsModel');
 const BenefitsAuditLog = require('./benefitsAuditLogModel');
 const MeetingRequest = require('./meetingRequestModel');
+const StudentFeedback = require('./studentFeedbackModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -276,6 +277,13 @@ MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 User.hasMany(MeetingRequest, { foreignKey: 'professorId', as: 'receivedMeetingRequests' });
 MeetingRequest.belongsTo(User, { foreignKey: 'professorId', as: 'professor' });
 
+// ===== Student Feedback Associations =====
+Course.hasMany(StudentFeedback, { foreignKey: 'courseId', as: 'feedback' });
+StudentFeedback.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+User.hasMany(StudentFeedback, { foreignKey: 'targetUserId', as: 'receivedFeedback' });
+StudentFeedback.belongsTo(User, { foreignKey: 'targetUserId', as: 'targetUser' });
+
 module.exports = {
   sequelize,
   User,
@@ -312,4 +320,5 @@ module.exports = {
   StaffBenefits,
   BenefitsAuditLog,
   MeetingRequest,
+  StudentFeedback,
 };

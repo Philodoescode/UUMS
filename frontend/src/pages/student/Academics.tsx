@@ -21,7 +21,9 @@ import {
     ChevronRightIcon,
     ClockIcon,
     UsersIcon,
+    MessageSquarePlusIcon,
 } from "lucide-react";
+import FeedbackModal from "@/components/FeedbackModal";
 import { IconSchool } from "@tabler/icons-react";
 import api from "@/lib/api";
 import {
@@ -49,6 +51,15 @@ interface Instructor {
     };
 }
 
+interface TAAssignment {
+    id: string;
+    taUser: {
+        id: string;
+        fullName: string;
+        email: string;
+    };
+}
+
 interface Course {
     id: string;
     courseCode: string;
@@ -64,6 +75,7 @@ interface Course {
         code: string;
     };
     instructors?: Instructor[];
+    taAssignments?: TAAssignment[];
 }
 
 interface Enrollment {
@@ -80,6 +92,27 @@ const Academics = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+
+    // Feedback Modal State
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [feedbackCourseId, setFeedbackCourseId] = useState<string>("");
+    const [feedbackCourseName, setFeedbackCourseName] = useState<string>("");
+    const [feedbackStaff, setFeedbackStaff] = useState<any[]>([]);
+
+    const openFeedbackModal = (course: Course) => {
+        const staff = [];
+        if (course.instructors) {
+            staff.push(...course.instructors.map(i => ({ userId: i.user.id, name: i.user.fullName, role: "Instructor" })));
+        }
+        if (course.taAssignments) {
+            staff.push(...course.taAssignments.map(ta => ({ userId: ta.taUser.id, name: ta.taUser.fullName, role: "TA" })));
+        }
+
+        setFeedbackCourseId(course.id);
+        setFeedbackCourseName(course.name);
+        setFeedbackStaff(staff);
+        setIsFeedbackOpen(true);
+    };
 
     const fetchEnrollments = useCallback(async () => {
         setIsLoading(true);
@@ -301,6 +334,21 @@ const Academics = () => {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* Action Buttons */}
+                                                {(enrollment.status === 'enrolled' || enrollment.status === 'completed') && (
+                                                    <Button
+                                                        variant="secondary"
+                                                        className="w-full mt-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openFeedbackModal(enrollment.course);
+                                                        }}
+                                                    >
+                                                        <MessageSquarePlusIcon className="size-4 mr-2" />
+                                                        Give Feedback
+                                                    </Button>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -308,9 +356,17 @@ const Academics = () => {
                             </div>
                         </>
                     )}
+
+                    <FeedbackModal
+                        isOpen={isFeedbackOpen}
+                        onClose={() => setIsFeedbackOpen(false)}
+                        courseId={feedbackCourseId}
+                        courseName={feedbackCourseName}
+                        staffMembers={feedbackStaff}
+                    />
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

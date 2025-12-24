@@ -1,4 +1,4 @@
-const { Enrollment, User, Course, Role, Department, Instructor } = require('../models');
+const { Enrollment, User, Course, Role, Department, Instructor, CourseTAAssignment } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Approve or Reject Enrollment (Advisor)
@@ -382,6 +382,13 @@ const getMyEnrollments = async (req, res) => {
                 { model: Department, as: 'department', attributes: ['id', 'name'] }
               ],
               attributes: ['id', 'title', 'officeLocation', 'officeHours']
+            },
+            {
+              model: CourseTAAssignment,
+              as: 'taAssignments',
+              include: [
+                { model: User, as: 'taUser', attributes: ['id', 'fullName', 'email'] }
+              ]
             }
           ],
         },
