@@ -35,6 +35,15 @@ const Instructor = sequelize.define('Instructor', {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
+  officeHours: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  awards: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    defaultValue: [],
+  },
 }, {
   tableName: 'instructors',
   timestamps: true,

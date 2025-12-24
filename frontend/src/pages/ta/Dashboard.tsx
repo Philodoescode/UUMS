@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import { INSTRUCTOR_LINKS } from "@/config/navLinks";
+import { TA_LINKS } from "@/config/navLinks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 
@@ -9,7 +8,7 @@ const TADashboard = () => {
 
     return (
         <div className="flex flex-col min-h-screen">
-            <Navbar links={INSTRUCTOR_LINKS} />
+            <Navbar links={TA_LINKS} />
             <main className="flex-grow bg-background p-8">
                 <div className="container mx-auto max-w-6xl">
                     <div className="flex justify-between items-center mb-6">
