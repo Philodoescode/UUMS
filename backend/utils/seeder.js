@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Role, User, Department, Instructor, Compensation, ParentStudent, Course, Enrollment, CourseInstructor } = require('../models');
+const { Role, User, Department, Instructor, Compensation, ParentStudent, Course, Enrollment, CourseInstructor, MeetingRequest } = require('../models');
 
 const seedDatabase = async () => {
   try {
@@ -347,6 +347,55 @@ const seedDatabase = async () => {
         if (created) {
           console.log(`Enrolled student in ${data.courseCode} with grade ${data.grade}`);
         }
+    }
+
+    // 11. Create Sample Meeting Requests
+    if (studentUser && instructorUser) {
+      const meetingRequestsData = [
+        {
+          studentId: studentUser.id,
+          professorId: instructorUser.id,
+          requestedDate: '2025-01-15',
+          requestedTime: '14:00:00',
+          reason: 'I would like to discuss my progress in CS101 and get guidance on the upcoming project.',
+          status: 'Pending',
+        },
+        {
+          studentId: studentUser.id,
+          professorId: instructorUser.id,
+          requestedDate: '2025-01-10',
+          requestedTime: '10:30:00',
+          reason: 'Need help understanding advanced data structures concepts covered in last lecture.',
+          status: 'Approved',
+          professorNotes: 'Looking forward to our discussion. Please bring your notes.',
+          approvedDate: '2025-01-10',
+          approvedTime: '10:30:00',
+        },
+        {
+          studentId: studentUser.id,
+          professorId: instructorUser.id,
+          requestedDate: '2024-12-20',
+          requestedTime: '16:00:00',
+          reason: 'Request to discuss grade appeal for midterm exam.',
+          status: 'Declined',
+          professorNotes: 'Please submit a formal grade appeal through the proper channels first.',
+        },
+      ];
+
+      for (const requestData of meetingRequestsData) {
+        const [meetingRequest, created] = await MeetingRequest.findOrCreate({
+          where: {
+            studentId: requestData.studentId,
+            professorId: requestData.professorId,
+            requestedDate: requestData.requestedDate,
+            requestedTime: requestData.requestedTime,
+          },
+          defaults: requestData,
+        });
+        if (created) {
+          console.log(`Meeting request created: ${requestData.status} - ${requestData.requestedDate} ${requestData.requestedTime}`);
+        }
+      }
       }
     }
 

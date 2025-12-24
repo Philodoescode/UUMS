@@ -20,6 +20,7 @@ import {
     GraduationCapIcon,
     ChevronRightIcon,
     ClockIcon,
+    UsersIcon,
 } from "lucide-react";
 import { IconSchool } from "@tabler/icons-react";
 import api from "@/lib/api";
@@ -31,6 +32,22 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
+
+interface Instructor {
+    id: string;
+    title: string;
+    officeLocation: string | null;
+    officeHours: string | null;
+    user: {
+        id: string;
+        fullName: string;
+        email: string;
+    };
+    department: {
+        id: string;
+        name: string;
+    };
+}
 
 interface Course {
     id: string;
@@ -46,6 +63,7 @@ interface Course {
         name: string;
         code: string;
     };
+    instructors?: Instructor[];
 }
 
 interface Enrollment {
@@ -236,24 +254,51 @@ const Academics = () => {
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                                <div className="flex items-center gap-2 text-muted-foreground">
-                                                    <BookOpenIcon className="size-4" />
-                                                    <span>{enrollment.course.credits} Credits</span>
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <BookOpenIcon className="size-4" />
+                                                        <span>{enrollment.course.credits} Credits</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <CalendarIcon className="size-4" />
+                                                        <span>{enrollment.course.semester} {enrollment.course.year}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                                                        <ClockIcon className="size-4" />
+                                                        <span>Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                    {enrollment.grade && (
+                                                        <div className="col-span-2">
+                                                            <Badge variant="secondary" className="text-sm">
+                                                                Grade: {enrollment.grade}
+                                                            </Badge>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-muted-foreground">
-                                                    <CalendarIcon className="size-4" />
-                                                    <span>{enrollment.course.semester} {enrollment.course.year}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                                                    <ClockIcon className="size-4" />
-                                                    <span>Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
-                                                </div>
-                                                {enrollment.grade && (
-                                                    <div className="col-span-2">
-                                                        <Badge variant="secondary" className="text-sm">
-                                                            Grade: {enrollment.grade}
-                                                        </Badge>
+
+                                                {/* Staff Information */}
+                                                {enrollment.course.instructors && enrollment.course.instructors.length > 0 && (
+                                                    <div className="pt-3 border-t">
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <UsersIcon className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {enrollment.course.instructors.map((instructor, idx) => (
+                                                                    <span key={instructor.id}>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                navigate(`/student/profile/${instructor.id}`);
+                                                                            }}
+                                                                            className="text-primary hover:underline font-medium"
+                                                                        >
+                                                                            {instructor.user.fullName}
+                                                                        </button>
+                                                                        {idx < enrollment.course.instructors!.length - 1 && <span className="text-muted-foreground">, </span>}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>

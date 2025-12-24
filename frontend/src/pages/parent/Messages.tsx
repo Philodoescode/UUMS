@@ -10,6 +10,7 @@ import { Send, ArrowLeft, MessageSquare, Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import InboxList from "@/components/InboxList";
+import { parseSimpleMarkdown } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -254,7 +255,7 @@ const Messages = () => {
                                                     ? 'bg-primary text-primary-foreground rounded-tr-none'
                                                     : 'bg-muted rounded-tl-none'
                                                     }`}>
-                                                    <p>{msg.body}</p>
+                                                    <p dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(msg.body) }} />
                                                     <span className={`text-[10px] opacity-70 block mt-1 text-right ${isMe ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
                                                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>

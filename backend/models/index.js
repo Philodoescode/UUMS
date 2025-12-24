@@ -33,6 +33,7 @@ const ParentStudent = require('./parentStudentModel');
 const CourseTAAssignment = require('./courseTAAssignmentModel');
 const StaffBenefits = require('./staffBenefitsModel');
 const BenefitsAuditLog = require('./benefitsAuditLogModel');
+const MeetingRequest = require('./meetingRequestModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -268,6 +269,12 @@ BenefitsAuditLog.belongsTo(StaffBenefits, { foreignKey: 'benefitsId', as: 'benef
 
 BenefitsAuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 BenefitsAuditLog.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
+// ===== Meeting Request Associations =====
+User.hasMany(MeetingRequest, { foreignKey: 'studentId', as: 'requestedMeetings' });
+MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+
+User.hasMany(MeetingRequest, { foreignKey: 'professorId', as: 'receivedMeetingRequests' });
+MeetingRequest.belongsTo(User, { foreignKey: 'professorId', as: 'professor' });
 
 module.exports = {
   sequelize,
@@ -304,4 +311,5 @@ module.exports = {
   CourseTAAssignment,
   StaffBenefits,
   BenefitsAuditLog,
+  MeetingRequest,
 };
