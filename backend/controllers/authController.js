@@ -38,6 +38,7 @@ const loginUser = async (req, res) => {
 
       res.json({
         _id: user.id,
+        id: user.id,
         fullName: user.fullName,
         email: user.email,
         role: user.role.name,
@@ -69,6 +70,7 @@ const checkAuth = async (req, res) => {
     const user = req.user;
     res.status(200).json({
       _id: user.id,
+      id: user.id,
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,
