@@ -8,11 +8,16 @@ const {
     checkoutAsset,
     returnAsset,
     deleteAsset,
+    getStudentAssets,
 } = require('../controllers/assetController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// All routes require authentication and admin role
 router.use(protect);
+
+// Student/Instructor route (View their own assets)
+router.get('/my-assets', authorize('admin', 'student', 'instructor'), getStudentAssets);
+
+// Admin Routes
 router.use(authorize('admin'));
 
 // CRUD routes
