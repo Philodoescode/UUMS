@@ -59,6 +59,7 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/student-feedback', require('./routes/studentFeedbackRoutes'));
 app.use('/api/appeals', appealRoutes);
 app.use('/api/instructor-portal', instructorPortalRoutes);
 app.use('/api/assessments', assessmentRoutes);
