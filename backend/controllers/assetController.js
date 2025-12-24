@@ -251,23 +251,6 @@ const checkoutAsset = async (req, res) => {
 const returnAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId, departmentId, notes } = req.body;
-
-        if (!userId && !departmentId) {
-            return res.status(400).json({ message: 'User ID or Department ID is required to return a software license' });
-        }
-
-        const whereClause = { assetId: id, status: 'Active' };
-        if (userId) whereClause.userId = userId;
-        if (departmentId) whereClause.departmentId = departmentId;
-
-        const license = await LicenseAssignment.findOne({ where: whereClause });
-
-        if (!license) {
-            return res.status(404).json({ message: 'Active license not found for this user' });
-        }
-
-        // Revoke license
         await license.update({ status: 'Revoked' });
 
         // Update seats
