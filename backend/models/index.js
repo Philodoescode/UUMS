@@ -24,6 +24,7 @@ const AdmissionApplication = require('./admissionApplicationModel');
 const StudentDocument = require('./studentDocumentModel');
 const Asset = require('./assetModel');
 const AssetAllocationLog = require('./assetAllocationLogModel');
+const LicenseAssignment = require('./licenseAssignmentModel');
 const Compensation = require('./compensationModel');
 const LeaveRequest = require('./leaveRequestModel');
 const CompensationAuditLog = require('./compensationAuditLogModel');
