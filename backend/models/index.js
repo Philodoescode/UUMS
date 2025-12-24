@@ -245,10 +245,6 @@ LicenseAssignment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 Department.hasMany(LicenseAssignment, { foreignKey: 'departmentId', as: 'departmentLicenses' });
 LicenseAssignment.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
-LicenseAssignment.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
-
-User.hasMany(LicenseAssignment, { foreignKey: 'userId', as: 'assignedLicenses' });
-LicenseAssignment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 module.exports = {
   sequelize,

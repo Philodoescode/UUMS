@@ -36,6 +36,7 @@ import {
 } from '@/lib/assetService';
 import { AssetAssignmentDialog } from '@/components/AssetAssignmentDialog';
 import { Building } from 'lucide-react';
+import axios from 'axios';
 
 const AssetDetails = () => {
     const { id } = useParams<{ id: string }>();

@@ -123,7 +123,7 @@ export function AssetAssignmentDialog({ asset, isOpen, onClose, onAssign }: Asse
                 <Tabs defaultValue="person" value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="person">Person</TabsTrigger>
-                        <TabsTrigger value="department" disabled={asset.type === 'Software'}>Department</TabsTrigger>
+                        <TabsTrigger value="department">Department</TabsTrigger>
                     </TabsList>
 
                     <div className="py-4 space-y-4">
