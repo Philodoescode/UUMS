@@ -30,6 +30,7 @@ const LeaveRequest = require('./leaveRequestModel');
 const CompensationAuditLog = require('./compensationAuditLogModel');
 const DirectMessage = require('./directMessageModel');
 const ParentStudent = require('./parentStudentModel');
+const CourseTAAssignment = require('./courseTAAssignmentModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -236,6 +237,15 @@ DirectMessage.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
 User.hasMany(DirectMessage, { foreignKey: 'recipientId', as: 'receivedMessages' });
 DirectMessage.belongsTo(User, { foreignKey: 'recipientId', as: 'recipient' });
 
+// ===== Course TA Assignment Associations =====
+Course.hasMany(CourseTAAssignment, { foreignKey: 'courseId', as: 'taAssignments' });
+CourseTAAssignment.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
+Instructor.hasMany(CourseTAAssignment, { foreignKey: 'instructorId', as: 'taAssignments' });
+CourseTAAssignment.belongsTo(Instructor, { foreignKey: 'instructorId', as: 'instructor' });
+
+User.hasMany(CourseTAAssignment, { foreignKey: 'taUserId', as: 'taAssignments' });
+CourseTAAssignment.belongsTo(User, { foreignKey: 'taUserId', as: 'taUser' });
 // ===== License Assignment Associations =====
 Asset.hasMany(LicenseAssignment, { foreignKey: 'assetId', as: 'licenses' });
 LicenseAssignment.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
@@ -278,4 +288,5 @@ module.exports = {
   CompensationAuditLog,
   DirectMessage,
   ParentStudent,
+  CourseTAAssignment,
 };
