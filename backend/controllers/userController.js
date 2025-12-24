@@ -136,6 +136,8 @@ const assignAdvisor = async (req, res) => {
 // @route   GET /api/users/faculty
 const getFacultyMembers = async (req, res) => {
     try {
+        const { Instructor, Department } = require('../models');
+
         // Find instructor and TA role IDs
         const instructorRole = await Role.findOne({ where: { name: 'instructor' } });
         const taRole = await Role.findOne({ where: { name: 'ta' } });
@@ -149,13 +151,21 @@ const getFacultyMembers = async (req, res) => {
         if (taRole) roleIds.push(taRole.id);
 
         const { Op } = require('sequelize');
-        
+
         const faculty = await User.findAll({
             where: {
                 roleId: { [Op.in]: roleIds }
             },
             include: [
-                { model: Role, as: 'role', attributes: ['name'] }
+                { model: Role, as: 'role', attributes: ['name'] },
+                {
+                    model: Instructor,
+                    as: 'instructorProfile',
+                    attributes: ['id', 'title', 'officeLocation', 'officeHours', 'awards'],
+                    include: [
+                        { model: Department, as: 'department', attributes: ['id', 'name'] }
+                    ]
+                }
             ],
             attributes: ['id', 'fullName', 'email']
         });
@@ -172,7 +182,7 @@ const getFacultyMembers = async (req, res) => {
 const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const user = await User.findByPk(id, {
             include: [
                 { model: Role, as: 'role', attributes: ['name'] }
