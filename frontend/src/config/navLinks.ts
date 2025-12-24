@@ -39,6 +39,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/my-students", label: "My Students" },
   { href: "/instructor/calendar", label: "Calendar & Events" },
   { href: "/instructor/messages", label: "Messages" },
+  { href: "/instructor/leave-requests", label: "Leave Requests" },
   { href: "/instructor/maintenance", label: "Maintenance" },
 ];
 
@@ -48,7 +49,9 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
  */
 export const TA_LINKS: NavLink[] = [
   { href: "/ta/dashboard", label: "Dashboard" },
+  { href: "/ta/profile", label: "My Profile" },
   { href: "/ta/my-courses", label: "My Courses" },
+  { href: "/ta/leave-requests", label: "Leave Requests" },
   { href: "/ta/messages", label: "Messages" },
 ];
 
@@ -85,14 +88,5 @@ export const HR_LINKS: NavLink[] = [
  */
 export const PARENT_LINKS: NavLink[] = [
   { href: "/parent/dashboard", label: "Dashboard" },
-];
-
-/**
- * TA Navbar
- * Focused on TA-specific functions.
- */
-export const TA_LINKS: NavLink[] = [
-  { href: "/ta/dashboard", label: "Dashboard" },
-  { href: "/ta/profile", label: "My Profile" },
   { href: "/parent/messages", label: "Messages" },
 ];
