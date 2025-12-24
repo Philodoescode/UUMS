@@ -21,7 +21,7 @@ const createAppeal = async (req, res) => {
                 return res.status(400).json({ message: 'You already have a pending appeal for this course grade.' });
             }
 
-            // Allow appeals only if grade exists? (Logic handled on frontend mostly, but good to verify)
+            // Allow appeal only if grade exists? (Logic handled on frontend mostly, but good to verify)
 
             const appeal = await GradeAppeal.create({
                 studentId,
