@@ -4,7 +4,7 @@ import { TA_LINKS } from "@/config/navLinks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { BookOpenIcon, ClipboardListIcon, CalendarIcon } from "lucide-react";
+import { BookOpenIcon, ClipboardListIcon, CalendarIcon, AwardIcon } from "lucide-react";
 
 const TADashboard = () => {
     const { user } = useAuth();
@@ -31,6 +31,13 @@ const TADashboard = () => {
             icon: CalendarIcon,
             href: "/ta/my-courses",
             color: "bg-purple-500/10 text-purple-600",
+        },
+        {
+            title: "Performance",
+            description: "View evaluations and professional development",
+            icon: AwardIcon,
+            href: "/ta/performance",
+            color: "bg-orange-500/10 text-orange-600",
         },
     ];
 
