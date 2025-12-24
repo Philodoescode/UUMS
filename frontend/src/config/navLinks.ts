@@ -84,4 +84,5 @@ export const PARENT_LINKS: NavLink[] = [
 export const TA_LINKS: NavLink[] = [
   { href: "/ta/dashboard", label: "Dashboard" },
   { href: "/ta/profile", label: "My Profile" },
+  { href: "/parent/messages", label: "Messages" },
 ];

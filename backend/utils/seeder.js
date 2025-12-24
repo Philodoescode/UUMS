@@ -1,10 +1,10 @@
 const bcrypt = require('bcryptjs');
-const { Role, User, Department, Instructor, Compensation } = require('../models');
+const { Role, User, Department, Instructor, Compensation, ParentStudent, Course, Enrollment, CourseInstructor } = require('../models');
 
 const seedDatabase = async () => {
   try {
     // 1. Check & Create Roles
-    const roles = ['admin', 'instructor', 'student', 'advisor', 'hr', 'ta'];
+    const roles = ['admin', 'instructor', 'student', 'advisor', 'hr', 'ta', 'parent'];
     const roleDocs = {};
 
     for (const roleName of roles) {
@@ -81,6 +81,12 @@ const seedDatabase = async () => {
         email: 'ta@example.com',
         password: hashedPassword,
         roleId: roleDocs['ta'],
+      },
+      {
+        fullName: 'Parent User',
+        email: 'parent@example.com',
+        password: hashedPassword,
+        roleId: roleDocs['parent'],
       },
     ];
 
@@ -207,6 +213,141 @@ const seedDatabase = async () => {
       }
 
       console.log(`instructor@example.com now has both instructor and advisor roles for announcement permissions`);
+    }
+
+    // 7. Create Mock Courses
+    const mockCourses = [
+      {
+        courseCode: 'CS101',
+        name: 'Introduction to Computer Science',
+        credits: 3,
+        departmentId: departmentDocs['CS'],
+        semester: 'Fall',
+        year: 2024,
+        capacity: 30,
+      },
+      {
+        courseCode: 'CS201',
+        name: 'Data Structures',
+        credits: 4,
+        departmentId: departmentDocs['CS'],
+        semester: 'Fall',
+        year: 2024,
+        capacity: 25,
+      },
+      {
+        courseCode: 'MATH101',
+        name: 'Calculus I',
+        credits: 4,
+        departmentId: departmentDocs['MATH'],
+        semester: 'Fall',
+        year: 2024,
+        capacity: 40,
+      },
+      {
+        courseCode: 'EE101',
+        name: 'Circuit Analysis',
+        credits: 3,
+        departmentId: departmentDocs['EE'],
+        semester: 'Fall',
+        year: 2024,
+        capacity: 20,
+      },
+    ];
+
+    const createdCourses = {};
+    for (const courseData of mockCourses) {
+      const [course, created] = await Course.findOrCreate({
+        where: { courseCode: courseData.courseCode },
+        defaults: courseData,
+      });
+      if (created) {
+        console.log(`Course created: ${courseData.courseCode} - ${courseData.name}`);
+      }
+      createdCourses[courseData.courseCode] = course;
+    }
+
+    // 8. Assign Instructor to Courses
+    const instructorProfile = await Instructor.findOne({
+      where: { userId: instructorUser.id }
+    });
+
+    if (instructorProfile) {
+      for (const courseCode of ['CS101', 'CS201']) {
+        const [assignment, created] = await CourseInstructor.findOrCreate({
+          where: {
+            courseId: createdCourses[courseCode].id,
+            instructorId: instructorProfile.id
+          },
+          defaults: {
+            courseId: createdCourses[courseCode].id,
+            instructorId: instructorProfile.id
+          }
+        });
+        if (created) {
+          console.log(`Assigned instructor to course: ${courseCode}`);
+        }
+      }
+    }
+
+    // 9. Link Parent to Student
+    const parentUser = createdUsers['parent@example.com'];
+    const studentUser = createdUsers['student@example.com'];
+
+    if (parentUser && studentUser) {
+      const [link, created] = await ParentStudent.findOrCreate({
+        where: {
+          parentId: parentUser.id,
+          studentId: studentUser.id
+        },
+        defaults: {
+          parentId: parentUser.id,
+          studentId: studentUser.id
+        }
+      });
+      if (created) {
+        console.log(`Linked parent (${parentUser.email}) to student (${studentUser.email})`);
+      }
+    }
+
+    // 10. Enroll Student in Courses
+    if (studentUser) {
+      const enrollmentData = [
+        {
+          courseCode: 'CS101',
+          grade: 'A',
+          attendancePercentage: 95,
+        },
+        {
+          courseCode: 'CS201',
+          grade: 'B+',
+          attendancePercentage: 88,
+        },
+        {
+          courseCode: 'MATH101',
+          grade: 'A-',
+          attendancePercentage: 92,
+        },
+      ];
+
+      for (const data of enrollmentData) {
+        const [enrollment, created] = await Enrollment.findOrCreate({
+          where: {
+            userId: studentUser.id,
+            courseId: createdCourses[data.courseCode].id
+          },
+          defaults: {
+            userId: studentUser.id,
+            courseId: createdCourses[data.courseCode].id,
+            status: 'enrolled',
+            grade: data.grade,
+            attendancePercentage: data.attendancePercentage,
+          }
+        });
+        if (created) {
+          console.log(`Enrolled student in ${data.courseCode} with grade ${data.grade}`);
+        }
+      }
     }
 
     console.log('Database Seeding Complete.');

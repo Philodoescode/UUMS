@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { DirectMessage, User, Role } = require('../models');
+const { DirectMessage, User, Role, Enrollment, Course, Instructor, CourseInstructor } = require('../models');
 
 // @desc    Send a new direct message
 // @route   POST /api/messages
@@ -36,6 +36,46 @@ const sendMessage = async (req, res) => {
       return res.status(400).json({
         message: 'Cannot send a message to yourself',
       });
+    }
+
+    // 4.5 Parent-Teacher Validation
+    // If sender is a parent, recipient must be a teacher of one of their children
+    if (req.user.role && req.user.role.name.toLowerCase() === 'parent') {
+      const authorized = await User.count({
+        where: { id: senderId },
+        include: [{
+          model: User,
+          as: 'children',
+          required: true,
+          include: [{
+            model: Enrollment,
+            as: 'enrollments',
+            required: true,
+            include: [{
+              model: Course,
+              as: 'course',
+              required: true,
+              include: [{
+                model: Instructor,
+                as: 'instructors',
+                required: true,
+                include: [{
+                  model: User,
+                  as: 'user',
+                  where: { id: recipientId },
+                  required: true
+                }]
+              }]
+            }]
+          }]
+        }]
+      });
+
+      if (authorized === 0) {
+        return res.status(403).json({
+          message: 'You can only message teachers assigned to your children.',
+        });
+      }
     }
 
     // 5. Create the message
