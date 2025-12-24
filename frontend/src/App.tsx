@@ -44,6 +44,7 @@ import AssetDetails from "@/pages/admin/AssetDetails";
 import HREmployees from "@/pages/admin/HREmployees";
 import HRDashboard from "@/pages/hr/HRDashboard";
 import HRBenefitsManagement from "@/pages/hr/HRBenefitsManagement";
+import ProfessionalDevelopmentPage from "@/pages/hr/ProfessionalDevelopmentPage";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentChildProgress from "@/pages/parent/ParentChildProgress";
 import ParentMessages from "@/pages/parent/Messages";
@@ -126,6 +127,7 @@ function App() {
             <Route path="/hr/announcements" element={<Announcements />} />
             <Route path="/hr/employees" element={<HREmployees />} />
             <Route path="/hr/benefits" element={<HRBenefitsManagement />} />
+            <Route path="/hr/professional-development" element={<ProfessionalDevelopmentPage />} />
           </Route>
 
           {/* Advisor Routes */}
