@@ -83,6 +83,8 @@ const createAsset = async (req, res) => {
             location,
             description,
             status: status || 'Available',
+            totalSeats: type === 'Software' ? (req.body.totalSeats || 1) : 1,
+            seatsAvailable: type === 'Software' ? (req.body.totalSeats || 1) : 1,
         });
 
         res.status(201).json(asset);
@@ -97,7 +99,7 @@ const createAsset = async (req, res) => {
 const updateAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { assetName, serialNumber, type, purchaseDate, value, location, description, status } = req.body;
+        const { assetName, serialNumber, type, purchaseDate, value, location, description, status, totalSeats } = req.body;
 
         const asset = await Asset.findByPk(id);
         if (!asset) {
