@@ -129,3 +129,10 @@ export const returnAsset = async (id: string, notes?: string): Promise<Asset> =>
     );
     return response.data.asset;
 };
+
+export const getMyAssets = async (): Promise<{ hardware: Asset[], software: any[] }> => {
+    const response = await axios.get(`${API_BASE_URL}/api/assets/my-assets`, {
+        withCredentials: true,
+    });
+    return response.data;
+};
