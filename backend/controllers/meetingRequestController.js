@@ -147,7 +147,7 @@ const getMyMeetingRequests = async (req, res) => {
           {
             model: User,
             as: 'student',
-            attributes: ['id', 'fullName', 'email', 'profileImage'],
+            attributes: ['id', 'fullName', 'email'],
             include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
           {
@@ -174,7 +174,7 @@ const getMyMeetingRequests = async (req, res) => {
           {
             model: User,
             as: 'professor',
-            attributes: ['id', 'fullName', 'email', 'profileImage'],
+            attributes: ['id', 'fullName', 'email'],
             include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
         ],
@@ -201,13 +201,13 @@ const getMeetingRequestById = async (req, res) => {
         {
           model: User,
           as: 'student',
-          attributes: ['id', 'fullName', 'email', 'profileImage'],
+          attributes: ['id', 'fullName', 'email'],
           include: [{ model: Role, as: 'role', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'professor',
-          attributes: ['id', 'fullName', 'email', 'profileImage'],
+          attributes: ['id', 'fullName', 'email'],
           include: [{ model: Role, as: 'role', attributes: ['name'] }],
         },
       ],
