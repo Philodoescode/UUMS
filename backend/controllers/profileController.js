@@ -1,4 +1,4 @@
-const { Instructor, User, Department, Role } = require('../models');
+const { Instructor, User, Department, Role, Course } = require('../models');
 
 // @desc    Get current user's instructor profile
 // @route   GET /api/profile/self
@@ -82,7 +82,44 @@ const updateMyProfile = async (req, res) => {
     }
 };
 
+// @desc    Get instructor/TA profile by ID (public view for students)
+// @route   GET /api/profile/:id
+const getProfileById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const instructor = await Instructor.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'fullName', 'email'],
+                    include: [
+                        { model: Role, as: 'role', attributes: ['id', 'name'] }
+                    ]
+                },
+                { model: Department, as: 'department' },
+                {
+                    model: Course,
+                    as: 'courses',
+                    attributes: ['id', 'courseCode', 'name', 'semester', 'year']
+                }
+            ],
+        });
+
+        if (!instructor) {
+            return res.status(404).json({ message: 'Profile not found' });
+        }
+
+        res.json(instructor);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getMyProfile,
     updateMyProfile,
+    getProfileById,
 };

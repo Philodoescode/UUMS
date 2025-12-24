@@ -46,6 +46,7 @@ import HRDashboard from "@/pages/hr/HRDashboard";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentChildProgress from "@/pages/parent/ParentChildProgress";
 import ParentMessages from "@/pages/parent/Messages";
+import StaffProfile from "@/pages/student/StaffProfile";
 import './App.css'
 
 function App() {
@@ -138,6 +139,7 @@ function App() {
             {/* New Routes */}
             <Route path="/student/directory" element={<FacultyDirectory />} />
             <Route path="/student/messages" element={<Messages />} />
+            <Route path="/student/profile/:instructorId" element={<StaffProfile />} />
             <Route path="/student/meeting-requests" element={<MyMeetingRequests />} />
 
             {/* Add other student routes here */}

@@ -1,4 +1,4 @@
-const { Enrollment, User, Course, Role, Department } = require('../models');
+const { Enrollment, User, Course, Role, Department, Instructor } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Approve or Reject Enrollment (Advisor)
@@ -365,7 +365,7 @@ const getMyEnrollments = async (req, res) => {
     const enrollments = await Enrollment.findAll({
       where: {
         userId,
-        status: { [Op.in]: ['enrolled', 'completed', 'waitlisted'] }
+        status: { [Op.in]: ['enrolled', 'completed', 'waitlisted', 'pending'] }
       },
       include: [
         {
@@ -373,7 +373,16 @@ const getMyEnrollments = async (req, res) => {
           as: 'course',
           include: [
             { model: Department, as: 'department' },
-            { model: Course, as: 'prerequisites' }
+            { model: Course, as: 'prerequisites' },
+            {
+              model: Instructor,
+              as: 'instructors',
+              include: [
+                { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] },
+                { model: Department, as: 'department', attributes: ['id', 'name'] }
+              ],
+              attributes: ['id', 'title', 'officeLocation', 'officeHours']
+            }
           ],
         },
       ],
