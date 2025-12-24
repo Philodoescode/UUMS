@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getMyProfile, updateMyProfile } from "@/lib/profileService";
 import type { Award, InstructorProfile } from "@/lib/profileService";
-import { RefreshCwIcon, PlusIcon, TrashIcon, SaveIcon, UserIcon } from "lucide-react";
+import { RefreshCwIcon, PlusIcon, TrashIcon, SaveIcon, UserIcon, StarIcon, MessageCircleIcon } from "lucide-react";
+import api from "@/lib/api";
 
 const Profile = () => {
     useAuth();
@@ -21,10 +22,23 @@ const Profile = () => {
     const [officeLocation, setOfficeLocation] = useState("");
     const [officeHours, setOfficeHours] = useState("");
     const [awards, setAwards] = useState<Award[]>([]);
+    const [feedbackStats, setFeedbackStats] = useState<any[]>([]);
+    const [feedbackComments, setFeedbackComments] = useState<any[]>([]);
 
     useEffect(() => {
         fetchProfile();
+        fetchFeedback();
     }, []);
+
+    const fetchFeedback = async () => {
+        try {
+            const response = await api.get('/feedback/my-feedback');
+            setFeedbackStats(response.data.stats);
+            setFeedbackComments(response.data.comments);
+        } catch (error) {
+            console.error("Failed to fetch feedback", error);
+        }
+    };
 
     const fetchProfile = async () => {
         try {
@@ -223,6 +237,64 @@ const Profile = () => {
                                                     onChange={(e) => updateAward(index, "description", e.target.value)}
                                                 />
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <MessageCircleIcon className="size-5" />
+                                Student Feedback
+                            </CardTitle>
+                            <CardDescription>Anonymous feedback from your enrolled students</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <div className="bg-muted p-4 rounded-lg text-center">
+                                    <div className="text-3xl font-bold text-primary">
+                                        {feedbackStats.length > 0
+                                            ? (feedbackStats.reduce((acc, curr) => acc + parseFloat(curr.averageRating) * parseInt(curr.totalReviews), 0) /
+                                                feedbackStats.reduce((acc, curr) => acc + parseInt(curr.totalReviews), 0)).toFixed(1)
+                                            : "N/A"
+                                        }
+                                    </div>
+                                    <div className="text-sm text-muted-foreground mt-1">Overall Rating</div>
+                                </div>
+                                <div className="bg-muted p-4 rounded-lg text-center">
+                                    <div className="text-3xl font-bold">
+                                        {feedbackStats.reduce((acc, curr) => acc + parseInt(curr.totalReviews), 0)}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground mt-1">Total Reviews</div>
+                                </div>
+                            </div>
+
+                            <Separator className="my-4" />
+
+                            <h3 className="font-semibold mb-4">Recent Comments</h3>
+                            {feedbackComments.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">No comments received yet.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {feedbackComments.map((comment, idx) => (
+                                        <div key={idx} className="border-b pb-4 last:border-0 last:pb-0">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <StarIcon
+                                                            key={i}
+                                                            className={`size-3 ${i < comment.rating ? "text-yellow-500 fill-current" : "text-gray-300"}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {comment.semester} {comment.year}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm">{comment.comments}</p>
                                         </div>
                                     ))}
                                 </div>
