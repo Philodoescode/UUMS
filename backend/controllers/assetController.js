@@ -4,11 +4,11 @@ const { Asset, AssetAllocationLog, User } = require('../models');
 // @route   GET /api/assets
 const getAllAssets = async (req, res) => {
     try {
-        const { status, category } = req.query;
+        const { status, type } = req.query;
         const where = {};
 
         if (status) where.status = status;
-        if (category) where.category = category;
+        if (type) where.type = type;
 
         const assets = await Asset.findAll({
             where,
@@ -63,21 +63,23 @@ const getAssetById = async (req, res) => {
 // @route   POST /api/assets
 const createAsset = async (req, res) => {
     try {
-        const { name, assetTag, category, location, description } = req.body;
+        const { assetName, serialNumber, type, purchaseDate, value, location, description, status } = req.body;
 
-        // Check for duplicate asset tag
-        const existingAsset = await Asset.findOne({ where: { assetTag } });
+        // Check for duplicate serial number
+        const existingAsset = await Asset.findOne({ where: { serialNumber } });
         if (existingAsset) {
-            return res.status(400).json({ message: 'Asset tag already exists' });
+            return res.status(400).json({ message: 'Serial Number / License Key already exists' });
         }
 
         const asset = await Asset.create({
-            name,
-            assetTag,
-            category: category || 'other',
+            assetName,
+            serialNumber,
+            type: type || 'Hardware',
+            purchaseDate,
+            value,
             location,
             description,
-            status: 'available',
+            status: status || 'Available',
         });
 
         res.status(201).json(asset);
@@ -92,27 +94,27 @@ const createAsset = async (req, res) => {
 const updateAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, assetTag, category, location, description, status } = req.body;
+        const { assetName, serialNumber, type, purchaseDate, value, location, description, status } = req.body;
 
         const asset = await Asset.findByPk(id);
         if (!asset) {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        // Check if new asset tag conflicts with another asset
-        if (assetTag && assetTag !== asset.assetTag) {
-            const existingAsset = await Asset.findOne({ where: { assetTag } });
+        // Check if new serial number conflicts with another asset
+        if (serialNumber && serialNumber !== asset.serialNumber) {
+            const existingAsset = await Asset.findOne({ where: { serialNumber } });
             if (existingAsset) {
-                return res.status(400).json({ message: 'Asset tag already exists' });
+                return res.status(400).json({ message: 'Serial Number / License Key already exists' });
             }
         }
 
-        // Update asset - required fields use || to prevent clearing,
-        // optional fields (location, description) use !== undefined to allow explicit clearing with null/empty string
         await asset.update({
-            name: name || asset.name,
-            assetTag: assetTag || asset.assetTag,
-            category: category || asset.category,
+            assetName: assetName || asset.assetName,
+            serialNumber: serialNumber || asset.serialNumber,
+            type: type || asset.type,
+            purchaseDate: purchaseDate || asset.purchaseDate,
+            value: value || asset.value,
             location: location !== undefined ? location : asset.location,
             description: description !== undefined ? description : asset.description,
             status: status || asset.status,
@@ -137,15 +139,11 @@ const checkoutAsset = async (req, res) => {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        if (asset.status === 'checked_out') {
+        if (asset.status === 'In Use') { // Updated status check
             return res.status(400).json({ message: 'Asset is already checked out' });
         }
 
-        if (asset.status === 'maintenance') {
-            return res.status(400).json({ message: 'Cannot checkout an asset that is in maintenance' });
-        }
-
-        if (asset.status === 'retired') {
+        if (asset.status === 'Retired') { // Updated status check
             return res.status(400).json({ message: 'Cannot checkout a retired asset' });
         }
 
@@ -157,7 +155,7 @@ const checkoutAsset = async (req, res) => {
 
         // Update asset
         await asset.update({
-            status: 'checked_out',
+            status: 'In Use', // Updated status
             currentHolderId: userId,
         });
 
@@ -194,7 +192,7 @@ const returnAsset = async (req, res) => {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        if (asset.status !== 'checked_out') {
+        if (asset.status !== 'In Use') { // Updated status check
             return res.status(400).json({ message: 'Asset is not currently checked out' });
         }
 
@@ -204,13 +202,13 @@ const returnAsset = async (req, res) => {
         if (previousHolderId) {
             const previousHolder = await User.findByPk(previousHolderId);
             if (!previousHolder) {
-                return res.status(400).json({ message: 'Previous holder user not found' });
+                // Should not happen if foreign key constraint holds, but soft deletes might affect this
             }
         }
 
         // Update asset
         await asset.update({
-            status: 'available',
+            status: 'Available', // Updated status
             currentHolderId: null,
         });
 
@@ -241,7 +239,7 @@ const deleteAsset = async (req, res) => {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        if (asset.status === 'checked_out') {
+        if (asset.status === 'In Use') { // Updated status check
             return res.status(400).json({ message: 'Cannot delete an asset that is currently checked out' });
         }
 

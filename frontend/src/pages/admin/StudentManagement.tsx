@@ -71,6 +71,26 @@ const StudentManagement = () => {
         }
     };
 
+    const handleDownloadTranscript = async (studentId: string, studentName: string) => {
+        try {
+            const response = await api.get(`/student-documents/${studentId}/transcript`, {
+                responseType: 'blob', // Important for handling binary data (PDF)
+            });
+
+            // Create a blob URL and invoke download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `transcript_${studentName.replace(/\s+/g, '_')}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (error) {
+            console.error("Download error:", error);
+            toast({ title: "Error", description: "Failed to download transcript", variant: "destructive" });
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-screen">
             <Navbar links={ADMIN_LINKS} />
@@ -116,6 +136,13 @@ const StudentManagement = () => {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDownloadTranscript(student.id, student.fullName)}
+                                                    >
+                                                        transcript
+                                                    </Button>
                                                     <StudentDocumentsDialog student={student} />
                                                 </div>
                                             </TableCell>
