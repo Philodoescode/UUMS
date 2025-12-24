@@ -12,6 +12,7 @@ import {
     RotateCcw,
     LogIn,
     LogOut,
+    Layers,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { ADMIN_LINKS } from '@/config/navLinks';
@@ -214,8 +215,8 @@ const AssetDetails = () => {
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    Current Holder
+                                    {asset.type === 'Software' ? <Layers className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                                    {asset.type === 'Software' ? 'License Allocation' : 'Current Holder'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
