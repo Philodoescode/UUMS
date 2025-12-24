@@ -10,6 +10,7 @@ import { Send, User as UserIcon, ArrowLeft, MessageSquare } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import InboxList from "@/components/InboxList";
+import { parseSimpleMarkdown } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -196,7 +197,7 @@ const Messages = () => {
                                                     ? 'bg-primary text-primary-foreground rounded-tr-none' 
                                                     : 'bg-muted rounded-tl-none'
                                                 }`}>
-                                                    <p>{msg.body}</p>
+                                                    <p dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(msg.body) }} />
                                                     <span className="text-[10px] opacity-70 block mt-1 text-right">
                                                         {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                                     </span>
