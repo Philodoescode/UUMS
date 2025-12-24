@@ -74,4 +74,5 @@ export const HR_LINKS: NavLink[] = [
  */
 export const PARENT_LINKS: NavLink[] = [
   { href: "/parent/dashboard", label: "Dashboard" },
+  { href: "/parent/messages", label: "Messages" },
 ];
