@@ -1,4 +1,4 @@
-const { Asset, AssetAllocationLog, User, Department } = require('../models');
+const { Asset, AssetAllocationLog, User, Department, LicenseAssignment } = require('../models');
 
 // @desc    Get all assets
 // @route   GET /api/assets
@@ -142,6 +142,50 @@ const checkoutAsset = async (req, res) => {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
+        if (asset.type === 'Software') {
+            if (asset.seatsAvailable < 1) {
+                return res.status(400).json({ message: 'No seats available for this software' });
+            }
+
+            if (!userId) {
+                return res.status(400).json({ message: 'Software licenses must be assigned to a user' });
+            }
+
+            // Check if user already has a license
+            const existingLicense = await LicenseAssignment.findOne({
+                where: { assetId: id, userId, status: 'Active' }
+            });
+
+            if (existingLicense) {
+                return res.status(400).json({ message: 'User already has this license assigned' });
+            }
+
+            // Create License Assignment
+            await LicenseAssignment.create({
+                assetId: id,
+                userId,
+                status: 'Active'
+            });
+
+            // Update Asset Seats
+            await asset.update({
+                seatsAvailable: asset.seatsAvailable - 1,
+                status: asset.seatsAvailable - 1 === 0 ? 'In Use' : 'Available' // 'In Use' means fully allocated here
+            });
+
+            // Log it
+            await AssetAllocationLog.create({
+                assetId: id,
+                userId,
+                action: 'checked_out', // or license_assigned
+                performedById: req.user.id,
+                notes: notes || 'Software License Assigned',
+            });
+
+            return res.json({ message: 'License assigned successfully', asset });
+        }
+
+        // --- Hardware Logic (Existing) ---
         if (asset.status === 'In Use') {
             return res.status(400).json({ message: 'Asset is already checked out' });
         }
@@ -202,15 +246,50 @@ const checkoutAsset = async (req, res) => {
 const returnAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { notes } = req.body;
+        const { userId, notes } = req.body; // userId required for software return
 
         const asset = await Asset.findByPk(id);
         if (!asset) {
             return res.status(404).json({ message: 'Asset not found' });
         }
 
-        if (asset.status !== 'In Use') { // Updated status check
-            return res.status(400).json({ message: 'Asset is not currently checked out' });
+        if (asset.type === 'Software') {
+            if (!userId) {
+                return res.status(400).json({ message: 'User ID is required to return a software license' });
+            }
+
+            const license = await LicenseAssignment.findOne({
+                where: { assetId: id, userId, status: 'Active' }
+            });
+
+            if (!license) {
+                return res.status(404).json({ message: 'Active license not found for this user' });
+            }
+
+            // Revoke license
+            await license.update({ status: 'Revoked' });
+
+            // Update seats
+            await asset.update({
+                seatsAvailable: asset.seatsAvailable + 1,
+                status: 'Available' // Always available if we freed a seat
+            });
+
+            // Create allocation log entry
+            await AssetAllocationLog.create({
+                assetId: id,
+                userId,
+                action: 'returned',
+                performedById: req.user.id,
+                notes: notes || 'Software License Revoked',
+            });
+
+            return res.json({ message: 'License revoked successfully', asset });
+        }
+
+        // --- Hardware Logic ---
+        if (asset.status !== 'In Use') {
+            return res.status(400).json({ message: 'Asset is not checked out' });
         }
 
         const previousHolderId = asset.currentHolderId;
@@ -263,6 +342,45 @@ const deleteAsset = async (req, res) => {
     }
 };
 
+// @desc    Get assets assigned to logged in student
+// @route   GET /api/assets/my-assets
+const getStudentAssets = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Fetch direct assignments (Hardware)
+        const hardware = await Asset.findAll({
+            where: { currentHolderId: userId },
+            attributes: ['id', 'assetName', 'serialNumber', 'type', 'description', 'updatedAt']
+        });
+
+        // Fetch license assignments (Software)
+        const licenses = await LicenseAssignment.findAll({
+            where: { userId, status: 'Active' },
+            include: [{
+                model: Asset,
+                as: 'asset',
+                attributes: ['id', 'assetName', 'serialNumber', 'type', 'description']
+            }]
+        });
+
+        // Format licenses to look like assets
+        const software = licenses.map(l => ({
+            id: l.asset.id,
+            assetName: l.asset.assetName,
+            serialNumber: l.asset.serialNumber, // License Key
+            type: 'Software',
+            description: l.asset.description,
+            assignedDate: l.assignedDate
+        }));
+
+        res.json({ hardware, software });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     getAllAssets,
     getAssetById,
@@ -271,4 +389,5 @@ module.exports = {
     checkoutAsset,
     returnAsset,
     deleteAsset,
+    getStudentAssets,
 };
