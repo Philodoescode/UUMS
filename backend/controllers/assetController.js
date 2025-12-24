@@ -37,6 +37,14 @@ const getAssetById = async (req, res) => {
                 { model: User, as: 'currentHolder', attributes: ['id', 'fullName', 'email'] },
                 { model: Department, as: 'assignedDepartment', attributes: ['id', 'name', 'code'] },
                 {
+                    model: LicenseAssignment,
+                    as: 'licenses',
+                    include: [
+                        { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] },
+                        { model: Department, as: 'department', attributes: ['id', 'name'] }
+                    ]
+                },
+                {
                     model: AssetAllocationLog,
                     as: 'allocationHistory',
                     include: [
@@ -251,56 +259,81 @@ const checkoutAsset = async (req, res) => {
 const returnAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        await license.update({ status: 'Revoked' });
+        const { userId, departmentId, notes } = req.body;
 
-        // Update seats
+        const asset = await Asset.findByPk(id);
+        if (!asset) {
+            return res.status(404).json({ message: 'Asset not found' });
+        }
+
+        // --- Software Logic ---
+        if (asset.type === 'Software') {
+            if (!userId && !departmentId) {
+                return res.status(400).json({ message: 'User ID or Department ID is required to return a software license' });
+            }
+
+            const whereClause = { assetId: id, status: 'Active' };
+            if (userId) whereClause.userId = userId;
+            if (departmentId) whereClause.departmentId = departmentId;
+
+            const license = await LicenseAssignment.findOne({ where: whereClause });
+
+            if (!license) {
+                return res.status(404).json({ message: 'Active license not found for this user/department' });
+            }
+
+            // Revoke license
+            await license.update({ status: 'Revoked' });
+
+            // Update seats
+            await asset.update({
+                seatsAvailable: asset.seatsAvailable + 1,
+                status: 'Available' // Always available if we freed a seat
+            });
+
+            // Create allocation log entry
+            await AssetAllocationLog.create({
+                assetId: id,
+                userId: userId || null,
+                departmentId: departmentId || null,
+                action: 'returned',
+                performedById: req.user.id,
+                notes: notes || 'Software License Revoked',
+            });
+
+            return res.json({ message: 'License revoked successfully', asset });
+        }
+
+        // --- Hardware Logic ---
+        if (asset.status !== 'In Use') {
+            return res.status(400).json({ message: 'Asset is not checked out' });
+        }
+
+        const previousHolderId = asset.currentHolderId;
+        const previousDepartmentId = asset.assignedToDepartmentId;
+
+        // Update asset
         await asset.update({
-            seatsAvailable: asset.seatsAvailable + 1,
-            status: 'Available' // Always available if we freed a seat
+            status: 'Available',
+            currentHolderId: null,
+            assignedToDepartmentId: null,
         });
 
         // Create allocation log entry
         await AssetAllocationLog.create({
             assetId: id,
-            userId,
+            userId: previousHolderId,
+            departmentId: previousDepartmentId,
             action: 'returned',
             performedById: req.user.id,
-            notes: notes || 'Software License Revoked',
+            notes,
         });
 
-        return res.json({ message: 'License revoked successfully', asset });
+        res.json({ message: 'Asset returned successfully', asset });
+    } catch (error) {
+        console.error("GET ASSET ERROR:", error);
+        res.status(500).json({ message: 'Server error' });
     }
-
-        // --- Hardware Logic ---
-        if (asset.status !== 'In Use') {
-        return res.status(400).json({ message: 'Asset is not checked out' });
-    }
-
-    const previousHolderId = asset.currentHolderId;
-    const previousDepartmentId = asset.assignedToDepartmentId;
-
-    // Update asset
-    await asset.update({
-        status: 'Available',
-        currentHolderId: null,
-        assignedToDepartmentId: null,
-    });
-
-    // Create allocation log entry
-    await AssetAllocationLog.create({
-        assetId: id,
-        userId: previousHolderId,
-        departmentId: previousDepartmentId,
-        action: 'returned',
-        performedById: req.user.id,
-        notes,
-    });
-
-    res.json({ message: 'Asset returned successfully', asset });
-} catch (error) {
-    console.error("GET ASSET ERROR:", error);
-    res.status(500).json({ message: 'Server error' });
-}
 };
 
 // @desc    Delete asset
