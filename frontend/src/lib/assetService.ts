@@ -13,13 +13,23 @@ export interface User {
 export interface AssetAllocationLog {
     id: string;
     assetId: string;
-    userId: string;
+    userId?: string;
+    departmentId?: string;
     action: 'checked_out' | 'returned';
     performedById: string;
     notes?: string;
     createdAt: string;
-    user?: User;
-    performedBy?: User;
+    user?: {
+        fullName: string;
+        email: string;
+    };
+    department?: {
+        name: string;
+        code: string;
+    };
+    performedBy?: {
+        fullName: string;
+    }
 }
 
 export interface Asset {
@@ -29,13 +39,23 @@ export interface Asset {
     type: 'Hardware' | 'Software';
     status: 'Available' | 'In Use' | 'Retired';
     currentHolderId?: string;
+    assignedToDepartmentId?: string;
     location?: string;
     description?: string;
     purchaseDate: string;
     value: number;
     createdAt: string;
     updatedAt: string;
-    currentHolder?: User;
+    currentHolder?: {
+        id: string;
+        fullName: string;
+        email: string;
+    };
+    assignedDepartment?: {
+        id: string;
+        name: string;
+        code: string;
+    };
     allocationHistory?: AssetAllocationLog[];
 }
 
@@ -98,10 +118,10 @@ export const deleteAsset = async (id: string): Promise<void> => {
     });
 };
 
-export const checkoutAsset = async (id: string, userId: string, notes?: string): Promise<Asset> => {
+export const checkoutAsset = async (id: string, assignmentData: { userId?: string; departmentId?: string; notes?: string }): Promise<Asset> => {
     const response = await axios.post(
         `${API_BASE_URL}/api/assets/${id}/checkout`,
-        { userId, notes },
+        assignmentData,
         { withCredentials: true }
     );
     return response.data.asset;
