@@ -35,6 +35,7 @@ import HREmployees from "@/pages/admin/HREmployees";
 import HRDashboard from "@/pages/hr/HRDashboard";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentChildProgress from "@/pages/parent/ParentChildProgress";
+import ParentMessages from "@/pages/parent/Messages";
 import './App.css'
 
 function App() {
@@ -127,6 +128,7 @@ function App() {
             <Route path="/parent" element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
             <Route path="/parent/child-progress/:childId" element={<ParentChildProgress />} />
+            <Route path="/parent/messages" element={<ParentMessages />} />
           </Route>
 
           {/* HR Routes */}

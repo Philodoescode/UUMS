@@ -1,4 +1,4 @@
-const { User, Enrollment, Course, Role } = require('../models');
+const { User, Enrollment, Course, Role, Instructor, CourseInstructor } = require('../models');
 
 // Helper to convert letter grade to GPA points
 const getGradePoints = (grade) => {
@@ -121,7 +121,80 @@ const getChildProgress = async (req, res) => {
     }
 };
 
+
+// @desc    Get authorized teachers for the parent (teachers of their children)
+// @route   GET /api/parent/teachers
+const getAuthorizedTeachers = async (req, res) => {
+    try {
+        const parentId = req.user.id;
+
+        // 1. Get all children IDs
+        const parent = await User.findByPk(parentId, {
+            include: [{
+                model: User,
+                as: 'children',
+                attributes: ['id']
+            }]
+        });
+
+        if (!parent || !parent.children || !parent.children.length) {
+            return res.json([]);
+        }
+
+        const childrenIds = parent.children.map(c => c.id);
+
+        // 2. Get enrollments for these children with course and instructors
+        const enrollments = await Enrollment.findAll({
+            where: {
+                userId: childrenIds,
+                status: 'enrolled'
+            },
+            include: [{
+                model: Course,
+                as: 'course',
+                include: [{
+                    model: Instructor,
+                    as: 'instructors',
+                    include: [{
+                        model: User,
+                        as: 'user', // The instructor's user profile
+                        attributes: ['id', 'fullName', 'email']
+                    }]
+                }]
+            }]
+        });
+
+        // 3. Extract unique teachers
+        const teacherMap = new Map();
+
+        for (const enrollment of enrollments) {
+            if (enrollment.course && enrollment.course.instructors) {
+                for (const instructor of enrollment.course.instructors) {
+                    if (instructor.user) {
+                        // Use userId as key to deduplicate
+                        if (!teacherMap.has(instructor.user.id)) {
+                            teacherMap.set(instructor.user.id, {
+                                id: instructor.user.id,
+                                fullName: instructor.user.fullName,
+                                email: instructor.user.email,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        const teachers = Array.from(teacherMap.values());
+        res.json(teachers);
+
+    } catch (error) {
+        console.error('Error fetching authorized teachers:', error);
+        res.status(500).json({ message: 'Server error fetching teachers' });
+    }
+};
+
 module.exports = {
     getChildren,
-    getChildProgress
+    getChildProgress,
+    getAuthorizedTeachers
 };
