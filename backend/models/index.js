@@ -212,6 +212,8 @@ AssetAllocationLog.belongsTo(User, { foreignKey: 'performedById', as: 'performed
 // ===== Compensation Associations =====
 User.hasOne(Compensation, { foreignKey: 'userId', as: 'compensation' });
 Compensation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Compensation.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(Compensation, { foreignKey: 'userId' });
 
 // ===== Leave Request Associations =====
 User.hasMany(LeaveRequest, { foreignKey: 'userId', as: 'leaveRequests' });
@@ -220,8 +222,8 @@ LeaveRequest.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 LeaveRequest.belongsTo(User, { foreignKey: 'reviewedById', as: 'reviewedBy' });
 
 // ===== Compensation Audit Log Associations =====
-Compensation.hasMany(CompensationAuditLog, { foreignKey: 'compensationId', as: 'auditLogs' });
-CompensationAuditLog.belongsTo(Compensation, { foreignKey: 'compensationId', as: 'compensation' });
+Compensation.hasMany(CompensationAuditLog, { foreignKey: 'compensationId' });
+CompensationAuditLog.belongsTo(Compensation, { foreignKey: 'compensationId' });
 
 CompensationAuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 CompensationAuditLog.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
@@ -232,6 +234,13 @@ DirectMessage.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
 
 User.hasMany(DirectMessage, { foreignKey: 'recipientId', as: 'receivedMessages' });
 DirectMessage.belongsTo(User, { foreignKey: 'recipientId', as: 'recipient' });
+
+// ===== License Assignment Associations =====
+Asset.hasMany(LicenseAssignment, { foreignKey: 'assetId', as: 'licenses' });
+LicenseAssignment.belongsTo(Asset, { foreignKey: 'assetId', as: 'asset' });
+
+User.hasMany(LicenseAssignment, { foreignKey: 'userId', as: 'assignedLicenses' });
+LicenseAssignment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 module.exports = {
   sequelize,
@@ -259,6 +268,7 @@ module.exports = {
   StudentDocument,
   Asset,
   AssetAllocationLog,
+  LicenseAssignment,
   Compensation,
   LeaveRequest,
   CompensationAuditLog,
