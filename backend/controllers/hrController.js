@@ -1,4 +1,4 @@
-const { User, Role, Instructor, Compensation, LeaveRequest, CompensationAuditLog, Department } = require('../models');
+const { User, Role, Instructor, Compensation, LeaveRequest, CompensationAuditLog, Department, StaffBenefits, BenefitsAuditLog } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Get all Instructors and TAs (for HR Employees page)
@@ -44,6 +44,11 @@ const getAllEmployees = async (req, res) => {
                         status: 'pending'
                     },
                     attributes: ['id', 'status']
+                },
+                {
+                    model: StaffBenefits,
+                    as: 'benefits',
+                    required: false
                 }
             ],
             attributes: ['id', 'fullName', 'email', 'isActive', 'createdAt']
@@ -491,6 +496,280 @@ const reviewLeaveRequest = async (req, res) => {
     }
 };
 
+// @desc    Get employee benefits
+// @route   GET /api/hr/employees/:id/benefits
+// @access  Private (HR only)
+const getEmployeeBenefits = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const employee = await User.findByPk(id, {
+            attributes: ['id', 'fullName', 'email'],
+            include: [
+                {
+                    model: StaffBenefits,
+                    as: 'benefits',
+                    required: false
+                }
+            ]
+        });
+
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: employee
+        });
+    } catch (error) {
+        console.error('Error fetching employee benefits:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch employee benefits',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Update employee benefits with audit logging
+// @route   PUT /api/hr/employees/:id/benefits
+// @access  Private (HR only)
+const updateEmployeeBenefits = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            planType,
+            coverageDetails,
+            coverageDocumentUrl,
+            validityStartDate,
+            validityEndDate,
+            dentalCoverage,
+            visionCoverage,
+            dependentsCovered,
+            additionalBenefits,
+            status,
+            changeReason
+        } = req.body;
+
+        // Verify employee exists
+        const employee = await User.findByPk(id);
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
+
+        // First, try to find existing benefits
+        let benefits = await StaffBenefits.findOne({
+            where: { userId: id }
+        });
+
+        let created = false;
+
+        if (!benefits) {
+            // Create new benefits record
+            // Ensure we have all required fields for creation
+            const today = new Date().toISOString().split('T')[0];
+            const nextYear = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+
+            benefits = await StaffBenefits.create({
+                userId: id,
+                planType: planType || 'Basic',
+                coverageDetails: coverageDetails || '',
+                coverageDocumentUrl: coverageDocumentUrl || null,
+                validityStartDate: validityStartDate || today,
+                validityEndDate: validityEndDate || nextYear,
+                dentalCoverage: dentalCoverage !== undefined ? dentalCoverage : false,
+                visionCoverage: visionCoverage !== undefined ? visionCoverage : false,
+                dependentsCovered: dependentsCovered !== undefined ? dependentsCovered : 0,
+                additionalBenefits: additionalBenefits || '',
+                status: status || 'pending'
+            });
+            created = true;
+
+            // Log initial creation
+            await BenefitsAuditLog.create({
+                benefitsId: benefits.id,
+                userId: id,
+                changedById: req.user.id,
+                fieldChanged: 'initial_creation',
+                oldValue: null,
+                newValue: 'Benefits record created',
+                changeReason: changeReason || 'Initial benefits setup by HR'
+            });
+        } else {
+            // Update existing benefits record
+            // Log changes for audit
+            const fields = {
+                planType,
+                coverageDetails,
+                coverageDocumentUrl,
+                validityStartDate,
+                validityEndDate,
+                dentalCoverage: dentalCoverage !== undefined ? String(dentalCoverage) : undefined,
+                visionCoverage: visionCoverage !== undefined ? String(visionCoverage) : undefined,
+                dependentsCovered: dependentsCovered !== undefined ? String(dependentsCovered) : undefined,
+                additionalBenefits,
+                status
+            };
+
+            for (const [field, newValue] of Object.entries(fields)) {
+                if (newValue !== undefined) {
+                    const oldValue = benefits[field];
+                    const oldValueStr = oldValue !== null && oldValue !== undefined ? String(oldValue) : null;
+                    const newValueStr = newValue !== null && newValue !== undefined ? String(newValue) : null;
+
+                    if (oldValueStr !== newValueStr) {
+                        await BenefitsAuditLog.create({
+                            benefitsId: benefits.id,
+                            userId: id,
+                            changedById: req.user.id,
+                            fieldChanged: field,
+                            oldValue: oldValueStr,
+                            newValue: newValueStr,
+                            changeReason: changeReason || 'Updated by HR'
+                        });
+                    }
+                }
+            }
+
+            // Update benefits
+            await benefits.update({
+                planType: planType !== undefined ? planType : benefits.planType,
+                coverageDetails: coverageDetails !== undefined ? coverageDetails : benefits.coverageDetails,
+                coverageDocumentUrl: coverageDocumentUrl !== undefined ? coverageDocumentUrl : benefits.coverageDocumentUrl,
+                validityStartDate: validityStartDate !== undefined ? validityStartDate : benefits.validityStartDate,
+                validityEndDate: validityEndDate !== undefined ? validityEndDate : benefits.validityEndDate,
+                dentalCoverage: dentalCoverage !== undefined ? dentalCoverage : benefits.dentalCoverage,
+                visionCoverage: visionCoverage !== undefined ? visionCoverage : benefits.visionCoverage,
+                dependentsCovered: dependentsCovered !== undefined ? dependentsCovered : benefits.dependentsCovered,
+                additionalBenefits: additionalBenefits !== undefined ? additionalBenefits : benefits.additionalBenefits,
+                status: status !== undefined ? status : benefits.status
+            });
+        }
+
+        // Reload to get updated values
+        await benefits.reload();
+
+        res.status(200).json({
+            success: true,
+            message: created ? 'Benefits created successfully' : 'Benefits updated successfully',
+            data: benefits
+        });
+    } catch (error) {
+        console.error('Error updating employee benefits:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update employee benefits',
+            error: error.message
+        });
+    }
+};
+
+
+// @desc    Get benefits audit logs for an employee
+// @route   GET /api/hr/employees/:id/benefits/audit
+// @access  Private (HR only)
+const getBenefitsAuditLogs = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const benefits = await StaffBenefits.findOne({
+            where: { userId: id }
+        });
+
+        if (!benefits) {
+            return res.status(404).json({
+                success: false,
+                message: 'No benefits record found for this employee'
+            });
+        }
+
+        const auditLogs = await BenefitsAuditLog.findAll({
+            where: { benefitsId: benefits.id },
+            include: [
+                {
+                    model: User,
+                    as: 'changedBy',
+                    attributes: ['id', 'fullName', 'email']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.status(200).json({
+            success: true,
+            count: auditLogs.length,
+            data: auditLogs
+        });
+    } catch (error) {
+        console.error('Error fetching benefits audit logs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch benefits audit logs',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Get all employees with their benefits info
+// @route   GET /api/hr/employees-benefits
+// @access  Private (HR only)
+const getAllEmployeesWithBenefits = async (req, res) => {
+    try {
+        const employees = await User.findAll({
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    where: {
+                        name: {
+                            [Op.in]: ['instructor', 'ta']
+                        }
+                    },
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Instructor,
+                    as: 'instructorProfile',
+                    required: false,
+                    include: [
+                        {
+                            model: Department,
+                            as: 'department',
+                            attributes: ['id', 'name', 'code']
+                        }
+                    ]
+                },
+                {
+                    model: StaffBenefits,
+                    as: 'benefits',
+                    required: false
+                }
+            ],
+            attributes: ['id', 'fullName', 'email', 'isActive', 'createdAt']
+        });
+
+        res.status(200).json({
+            success: true,
+            count: employees.length,
+            data: employees
+        });
+    } catch (error) {
+        console.error('Error fetching employees with benefits:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch employees with benefits',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllEmployees,
     getEmployeeById,
@@ -498,5 +777,9 @@ module.exports = {
     getCompensationAuditLogs,
     getLeaveRequests,
     getEmployeeLeaveRequests,
-    reviewLeaveRequest
+    reviewLeaveRequest,
+    getEmployeeBenefits,
+    updateEmployeeBenefits,
+    getBenefitsAuditLogs,
+    getAllEmployeesWithBenefits
 };

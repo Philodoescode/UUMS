@@ -32,6 +32,7 @@ const parentRoutes = require('./routes/parentRoutes');
 const taAssignmentRoutes = require('./routes/taAssignmentRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
+const staffBenefitsRoutes = require('./routes/staffBenefitsRoutes');
 
 
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/parent', parentRoutes);
 app.use('/api/ta-assignments', taAssignmentRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/leave-requests', leaveRoutes);
+app.use('/api/staff', staffBenefitsRoutes);
 
 const PORT = process.env.PORT || 3000;
 
