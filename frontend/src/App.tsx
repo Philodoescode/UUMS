@@ -17,6 +17,7 @@ import MyCourses from "@/pages/instructor/MyCourses"
 import CourseDashboard from "@/pages/instructor/CourseDashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import InstructorMessages from "@/pages/instructor/Messages"
+import MeetingRequestsReview from "@/pages/instructor/MeetingRequestsReview"
 import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
@@ -26,6 +27,7 @@ import AssessmentTake from "./pages/student/AssessmentTake";
 import AssessmentResult from "./pages/student/AssessmentResult";
 import FacultyDirectory from "./pages/student/FacultyDirectory";
 import Messages from "./pages/student/Messages";
+import MyMeetingRequests from "./pages/student/MyMeetingRequests";
 import AdmissionApplication from "@/pages/AdmissionApplication";
 import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit";
 import TADashboard from "@/pages/ta/Dashboard";
@@ -96,6 +98,7 @@ function App() {
             <Route path="/instructor/grades" element={<GradeManagement />} />
             <Route path="/instructor/leave-requests" element={<InstructorLeaveRequests />} />
             <Route path="/instructor/messages" element={<InstructorMessages />} />
+            <Route path="/instructor/meeting-requests" element={<MeetingRequestsReview />} />
           </Route>
 
           {/* TA Routes */}
@@ -137,6 +140,7 @@ function App() {
             <Route path="/student/directory" element={<FacultyDirectory />} />
             <Route path="/student/messages" element={<Messages />} />
             <Route path="/student/profile/:instructorId" element={<StaffProfile />} />
+            <Route path="/student/meeting-requests" element={<MyMeetingRequests />} />
 
             {/* Add other student routes here */}
           </Route>

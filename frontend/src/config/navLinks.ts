@@ -39,6 +39,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/my-students", label: "My Students" },
   { href: "/instructor/calendar", label: "Calendar & Events" },
   { href: "/instructor/messages", label: "Messages" },
+  { href: "/instructor/meeting-requests", label: "Meeting Requests" },
   { href: "/instructor/leave-requests", label: "Leave Requests" },
   { href: "/instructor/maintenance", label: "Maintenance" },
 ];
@@ -69,6 +70,7 @@ export const STUDENT_LINKS: NavLink[] = [
   { href: "/student/questions", label: "Questions" },
   { href: "/student/directory", label: "Faculty Directory" },
   { href: "/student/messages", label: "Messages" },
+  { href: "/student/meeting-requests", label: "My Meeting Requests" },
 ];
 
 /**
