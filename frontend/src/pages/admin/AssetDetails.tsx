@@ -33,30 +33,39 @@ import {
     type Asset,
     type AssetAllocationLog,
 } from '@/lib/assetService';
+import { AssetAssignmentDialog } from '@/components/AssetAssignmentDialog';
+import { Building } from 'lucide-react';
 
 const AssetDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [asset, setAsset] = useState<Asset | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
     const { toast } = useToast();
+
+    const [error, setError] = useState<string | null>(null);
 
     const fetchAsset = useCallback(async () => {
         if (!id) return;
         setLoading(true);
+        setError(null);
         try {
             const data = await getAssetById(id);
             setAsset(data);
         } catch (error: any) {
+            console.error(error);
+            const msg = error.response?.data?.message || error.message || 'Failed to load asset details';
+            setError(msg);
             toast({
                 title: 'Error',
-                description: 'Failed to load asset details',
+                description: msg,
                 variant: 'destructive',
             });
         } finally {
             setLoading(false);
         }
-    }, [id, toast]);
+    }, [id]);
 
     useEffect(() => {
         fetchAsset();
@@ -138,7 +147,7 @@ const AssetDetails = () => {
                 <main className="flex-grow container mx-auto p-6 flex items-center justify-center">
                     <div className="text-center">
                         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Asset not found</p>
+                        <p className="text-muted-foreground">{error || 'Asset not found'}</p>
                         <Button variant="outline" className="mt-4" onClick={() => navigate('/admin/assets')}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Assets
@@ -178,6 +187,12 @@ const AssetDetails = () => {
                                 Return Asset
                             </Button>
                         )}
+                        {asset.status === 'Available' && (
+                            <Button onClick={() => setIsAssignmentDialogOpen(true)}>
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Assign Asset
+                            </Button>
+                        )}
                     </div>
 
                     {/* Info Cards */}
@@ -208,6 +223,16 @@ const AssetDetails = () => {
                                     <div>
                                         <p className="text-lg font-medium">{asset.currentHolder.fullName}</p>
                                         <p className="text-sm text-muted-foreground">{asset.currentHolder.email}</p>
+                                        <Badge variant="outline" className="mt-1">User</Badge>
+                                    </div>
+                                ) : asset.assignedDepartment ? (
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <Building className="h-4 w-4 text-muted-foreground" />
+                                            <p className="text-lg font-medium">{asset.assignedDepartment.name}</p>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">{asset.assignedDepartment.code}</p>
+                                        <Badge variant="outline" className="mt-1">Department</Badge>
                                     </div>
                                 ) : (
                                     <p className="text-lg font-medium text-muted-foreground">No one</p>
@@ -321,6 +346,18 @@ const AssetDetails = () => {
                     </Card>
                 </div>
             </main>
+
+            {asset && (
+                <AssetAssignmentDialog
+                    asset={asset}
+                    isOpen={isAssignmentDialogOpen}
+                    onClose={() => setIsAssignmentDialogOpen(false)}
+                    onAssign={() => {
+                        fetchAsset();
+                        setIsAssignmentDialogOpen(false);
+                    }}
+                />
+            )}
         </div>
     );
 };
