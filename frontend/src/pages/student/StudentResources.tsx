@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Laptop, Key, Calendar } from "lucide-react";
+import { Laptop, Key } from "lucide-react";
 import { getMyAssets, type Asset } from "@/lib/assetService"; // Ensure type checks out
 
 // We might need to adjust types in assetService or define here if response structure differs
