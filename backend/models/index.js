@@ -31,6 +31,8 @@ const CompensationAuditLog = require('./compensationAuditLogModel');
 const DirectMessage = require('./directMessageModel');
 const ParentStudent = require('./parentStudentModel');
 const CourseTAAssignment = require('./courseTAAssignmentModel');
+const StaffBenefits = require('./staffBenefitsModel');
+const BenefitsAuditLog = require('./benefitsAuditLogModel');
 const MeetingRequest = require('./meetingRequestModel');
 
 // ===== Parent & Student Associations =====
@@ -257,6 +259,16 @@ LicenseAssignment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Department.hasMany(LicenseAssignment, { foreignKey: 'departmentId', as: 'departmentLicenses' });
 LicenseAssignment.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 
+// ===== Staff Benefits Associations =====
+User.hasOne(StaffBenefits, { foreignKey: 'userId', as: 'benefits' });
+StaffBenefits.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// ===== Benefits Audit Log Associations =====
+StaffBenefits.hasMany(BenefitsAuditLog, { foreignKey: 'benefitsId', as: 'auditLogs' });
+BenefitsAuditLog.belongsTo(StaffBenefits, { foreignKey: 'benefitsId', as: 'benefits' });
+
+BenefitsAuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+BenefitsAuditLog.belongsTo(User, { foreignKey: 'changedById', as: 'changedBy' });
 // ===== Meeting Request Associations =====
 User.hasMany(MeetingRequest, { foreignKey: 'studentId', as: 'requestedMeetings' });
 MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
@@ -297,5 +309,7 @@ module.exports = {
   DirectMessage,
   ParentStudent,
   CourseTAAssignment,
+  StaffBenefits,
+  BenefitsAuditLog,
   MeetingRequest,
 };

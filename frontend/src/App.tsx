@@ -43,9 +43,12 @@ import AssetManagement from "@/pages/admin/AssetManagement";
 import AssetDetails from "@/pages/admin/AssetDetails";
 import HREmployees from "@/pages/admin/HREmployees";
 import HRDashboard from "@/pages/hr/HRDashboard";
+import HRBenefitsManagement from "@/pages/hr/HRBenefitsManagement";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentChildProgress from "@/pages/parent/ParentChildProgress";
 import ParentMessages from "@/pages/parent/Messages";
+import InstructorBenefitsInsurance from "@/pages/instructor/BenefitsInsurance";
+import TABenefitsInsurance from "@/pages/ta/BenefitsInsurance";
 import StaffProfile from "@/pages/student/StaffProfile";
 import './App.css'
 
@@ -97,6 +100,7 @@ function App() {
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
             <Route path="/instructor/leave-requests" element={<InstructorLeaveRequests />} />
+            <Route path="/instructor/benefits" element={<InstructorBenefitsInsurance />} />
             <Route path="/instructor/messages" element={<InstructorMessages />} />
             <Route path="/instructor/meeting-requests" element={<MeetingRequestsReview />} />
           </Route>
@@ -109,6 +113,7 @@ function App() {
             <Route path="/ta/course/:assignmentId" element={<TACourseDashboard />} />
             <Route path="/ta/profile" element={<TAProfile />} />
             <Route path="/ta/leave-requests" element={<TALeaveRequests />} />
+            <Route path="/ta/benefits" element={<TABenefitsInsurance />} />
           </Route>
 
           {/* HR Routes */}
@@ -117,6 +122,7 @@ function App() {
             <Route path="/hr/dashboard" element={<HRDashboard />} />
             <Route path="/hr/announcements" element={<Announcements />} />
             <Route path="/hr/employees" element={<HREmployees />} />
+            <Route path="/hr/benefits" element={<HRBenefitsManagement />} />
           </Route>
 
           {/* Advisor Routes */}
@@ -153,11 +159,6 @@ function App() {
             <Route path="/parent/messages" element={<ParentMessages />} />
           </Route>
 
-          {/* HR Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['hr']} />}>
-            <Route path="/hr" element={<Navigate to="/hr/dashboard" replace />} />
-            <Route path="/hr/dashboard" element={<HRDashboard />} />
-          </Route>
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
