@@ -21,7 +21,7 @@ const getAllAssets = async (req, res) => {
 
         res.json(assets);
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -57,7 +57,7 @@ const getAssetById = async (req, res) => {
 
         res.json(asset);
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -87,7 +87,7 @@ const createAsset = async (req, res) => {
 
         res.status(201).json(asset);
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -125,7 +125,7 @@ const updateAsset = async (req, res) => {
 
         res.json(asset);
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -192,7 +192,7 @@ const checkoutAsset = async (req, res) => {
 
         res.json({ message: 'Asset checked out successfully', asset });
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -235,7 +235,7 @@ const returnAsset = async (req, res) => {
 
         res.json({ message: 'Asset returned successfully', asset });
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -258,7 +258,7 @@ const deleteAsset = async (req, res) => {
         await asset.destroy();
         res.json({ message: 'Asset deleted successfully' });
     } catch (error) {
-        console.error(error);
+        console.error("GET ASSET ERROR:", error);
         res.status(500).json({ message: 'Server error' });
     }
 };
