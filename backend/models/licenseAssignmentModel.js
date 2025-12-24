@@ -17,9 +17,17 @@ const LicenseAssignment = sequelize.define('LicenseAssignment', {
     },
     userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true, // Changed from false
         references: {
             model: 'users',
+            key: 'id',
+        },
+    },
+    departmentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'departments',
             key: 'id',
         },
     },

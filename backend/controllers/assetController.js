@@ -149,23 +149,26 @@ const checkoutAsset = async (req, res) => {
                 return res.status(400).json({ message: 'No seats available for this software' });
             }
 
-            if (!userId) {
-                return res.status(400).json({ message: 'Software licenses must be assigned to a user' });
+            if (!userId && !departmentId) {
+                return res.status(400).json({ message: 'Software licenses must be assigned to a user or department' });
             }
 
-            // Check if user already has a license
-            const existingLicense = await LicenseAssignment.findOne({
-                where: { assetId: id, userId, status: 'Active' }
-            });
+            // Check if user/dept already has a license
+            const whereClause = { assetId: id, status: 'Active' };
+            if (userId) whereClause.userId = userId;
+            if (departmentId) whereClause.departmentId = departmentId;
+
+            const existingLicense = await LicenseAssignment.findOne({ where: whereClause });
 
             if (existingLicense) {
-                return res.status(400).json({ message: 'User already has this license assigned' });
+                return res.status(400).json({ message: 'User/Department already has this license assigned' });
             }
 
             // Create License Assignment
             await LicenseAssignment.create({
                 assetId: id,
-                userId,
+                userId: userId || null,
+                departmentId: departmentId || null,
                 status: 'Active'
             });
 
@@ -248,77 +251,73 @@ const checkoutAsset = async (req, res) => {
 const returnAsset = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId, notes } = req.body; // userId required for software return
+        const { userId, departmentId, notes } = req.body;
 
-        const asset = await Asset.findByPk(id);
-        if (!asset) {
-            return res.status(404).json({ message: 'Asset not found' });
+        if (!userId && !departmentId) {
+            return res.status(400).json({ message: 'User ID or Department ID is required to return a software license' });
         }
 
-        if (asset.type === 'Software') {
-            if (!userId) {
-                return res.status(400).json({ message: 'User ID is required to return a software license' });
-            }
+        const whereClause = { assetId: id, status: 'Active' };
+        if (userId) whereClause.userId = userId;
+        if (departmentId) whereClause.departmentId = departmentId;
 
-            const license = await LicenseAssignment.findOne({
-                where: { assetId: id, userId, status: 'Active' }
-            });
+        const license = await LicenseAssignment.findOne({ where: whereClause });
 
-            if (!license) {
-                return res.status(404).json({ message: 'Active license not found for this user' });
-            }
-
-            // Revoke license
-            await license.update({ status: 'Revoked' });
-
-            // Update seats
-            await asset.update({
-                seatsAvailable: asset.seatsAvailable + 1,
-                status: 'Available' // Always available if we freed a seat
-            });
-
-            // Create allocation log entry
-            await AssetAllocationLog.create({
-                assetId: id,
-                userId,
-                action: 'returned',
-                performedById: req.user.id,
-                notes: notes || 'Software License Revoked',
-            });
-
-            return res.json({ message: 'License revoked successfully', asset });
+        if (!license) {
+            return res.status(404).json({ message: 'Active license not found for this user' });
         }
 
-        // --- Hardware Logic ---
-        if (asset.status !== 'In Use') {
-            return res.status(400).json({ message: 'Asset is not checked out' });
-        }
+        // Revoke license
+        await license.update({ status: 'Revoked' });
 
-        const previousHolderId = asset.currentHolderId;
-        const previousDepartmentId = asset.assignedToDepartmentId;
-
-        // Update asset
+        // Update seats
         await asset.update({
-            status: 'Available',
-            currentHolderId: null,
-            assignedToDepartmentId: null,
+            seatsAvailable: asset.seatsAvailable + 1,
+            status: 'Available' // Always available if we freed a seat
         });
 
         // Create allocation log entry
         await AssetAllocationLog.create({
             assetId: id,
-            userId: previousHolderId,
-            departmentId: previousDepartmentId,
+            userId,
             action: 'returned',
             performedById: req.user.id,
-            notes,
+            notes: notes || 'Software License Revoked',
         });
 
-        res.json({ message: 'Asset returned successfully', asset });
-    } catch (error) {
-        console.error("GET ASSET ERROR:", error);
-        res.status(500).json({ message: 'Server error' });
+        return res.json({ message: 'License revoked successfully', asset });
     }
+
+        // --- Hardware Logic ---
+        if (asset.status !== 'In Use') {
+        return res.status(400).json({ message: 'Asset is not checked out' });
+    }
+
+    const previousHolderId = asset.currentHolderId;
+    const previousDepartmentId = asset.assignedToDepartmentId;
+
+    // Update asset
+    await asset.update({
+        status: 'Available',
+        currentHolderId: null,
+        assignedToDepartmentId: null,
+    });
+
+    // Create allocation log entry
+    await AssetAllocationLog.create({
+        assetId: id,
+        userId: previousHolderId,
+        departmentId: previousDepartmentId,
+        action: 'returned',
+        performedById: req.user.id,
+        notes,
+    });
+
+    res.json({ message: 'Asset returned successfully', asset });
+} catch (error) {
+    console.error("GET ASSET ERROR:", error);
+    res.status(500).json({ message: 'Server error' });
+}
 };
 
 // @desc    Delete asset
