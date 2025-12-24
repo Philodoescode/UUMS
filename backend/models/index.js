@@ -34,6 +34,7 @@ const CourseTAAssignment = require('./courseTAAssignmentModel');
 const StaffBenefits = require('./staffBenefitsModel');
 const BenefitsAuditLog = require('./benefitsAuditLogModel');
 const MeetingRequest = require('./meetingRequestModel');
+const Payslip = require('./payslipModel');
 const StudentFeedback = require('./studentFeedbackModel');
 
 // ===== Parent & Student Associations =====
@@ -277,6 +278,9 @@ MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 User.hasMany(MeetingRequest, { foreignKey: 'professorId', as: 'receivedMeetingRequests' });
 MeetingRequest.belongsTo(User, { foreignKey: 'professorId', as: 'professor' });
 
+// ===== Payslip Associations =====
+User.hasMany(Payslip, { foreignKey: 'userId', as: 'payslips' });
+Payslip.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // ===== Student Feedback Associations =====
 Course.hasMany(StudentFeedback, { foreignKey: 'courseId', as: 'feedback' });
 StudentFeedback.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
@@ -320,5 +324,6 @@ module.exports = {
   StaffBenefits,
   BenefitsAuditLog,
   MeetingRequest,
+  Payslip,
   StudentFeedback,
 };

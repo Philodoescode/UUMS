@@ -50,6 +50,7 @@ import ParentMessages from "@/pages/parent/Messages";
 import InstructorBenefitsInsurance from "@/pages/instructor/BenefitsInsurance";
 import TABenefitsInsurance from "@/pages/ta/BenefitsInsurance";
 import StaffProfile from "@/pages/student/StaffProfile";
+import PayrollPage from "@/pages/instructor/PayrollPage";
 import './App.css'
 
 function App() {
@@ -103,6 +104,7 @@ function App() {
             <Route path="/instructor/benefits" element={<InstructorBenefitsInsurance />} />
             <Route path="/instructor/messages" element={<InstructorMessages />} />
             <Route path="/instructor/meeting-requests" element={<MeetingRequestsReview />} />
+            <Route path="/instructor/payroll" element={<PayrollPage />} />
           </Route>
 
           {/* TA Routes */}
@@ -114,6 +116,7 @@ function App() {
             <Route path="/ta/profile" element={<TAProfile />} />
             <Route path="/ta/leave-requests" element={<TALeaveRequests />} />
             <Route path="/ta/benefits" element={<TABenefitsInsurance />} />
+            <Route path="/ta/payroll" element={<PayrollPage />} />
           </Route>
 
           {/* HR Routes */}
