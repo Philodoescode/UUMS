@@ -61,6 +61,16 @@ const Asset = sequelize.define('Asset', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    totalSeats: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1,
+        allowNull: false,
+    },
+    seatsAvailable: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1,
+        allowNull: false,
+    },
     description: {
         type: DataTypes.TEXT,
         allowNull: true,
