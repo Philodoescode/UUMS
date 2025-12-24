@@ -31,6 +31,7 @@ const CompensationAuditLog = require('./compensationAuditLogModel');
 const DirectMessage = require('./directMessageModel');
 const ParentStudent = require('./parentStudentModel');
 const CourseTAAssignment = require('./courseTAAssignmentModel');
+const MeetingRequest = require('./meetingRequestModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -256,6 +257,13 @@ LicenseAssignment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Department.hasMany(LicenseAssignment, { foreignKey: 'departmentId', as: 'departmentLicenses' });
 LicenseAssignment.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 
+// ===== Meeting Request Associations =====
+User.hasMany(MeetingRequest, { foreignKey: 'studentId', as: 'requestedMeetings' });
+MeetingRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+
+User.hasMany(MeetingRequest, { foreignKey: 'professorId', as: 'receivedMeetingRequests' });
+MeetingRequest.belongsTo(User, { foreignKey: 'professorId', as: 'professor' });
+
 module.exports = {
   sequelize,
   User,
@@ -289,4 +297,5 @@ module.exports = {
   DirectMessage,
   ParentStudent,
   CourseTAAssignment,
+  MeetingRequest,
 };
