@@ -27,10 +27,12 @@ import AssessmentResult from "./pages/student/AssessmentResult";
 import FacultyDirectory from "./pages/student/FacultyDirectory";
 import Messages from "./pages/student/Messages";
 import AdmissionApplication from "@/pages/AdmissionApplication";
-import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit"; // Assuming components folder
+import StudentAssignmentSubmit from "./components/StudentAssignmentSubmit";
 import TADashboard from "@/pages/ta/Dashboard";
 import TAMyCourses from "@/pages/ta/MyCourses";
 import TACourseDashboard from "@/pages/ta/CourseDashboard";
+import TAProfile from "@/pages/ta/Profile";
+import InstructorProfile from "@/pages/instructor/Profile";
 import MaintenanceReporting from "@/pages/instructor/MaintenanceReporting";
 import MaintenanceRequests from "@/pages/admin/MaintenanceRequests";
 import AssetManagement from "@/pages/admin/AssetManagement";
@@ -39,6 +41,7 @@ import HREmployees from "@/pages/admin/HREmployees";
 import HRDashboard from "@/pages/hr/HRDashboard";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentChildProgress from "@/pages/parent/ParentChildProgress";
+import ParentMessages from "@/pages/parent/Messages";
 import './App.css'
 
 function App() {
@@ -84,6 +87,7 @@ function App() {
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
             <Route path="/instructor/my-courses" element={<MyCourses />} />
             <Route path="/instructor/course/:courseId" element={<CourseDashboard />} />
+            <Route path="/instructor/profile" element={<InstructorProfile />} />
             <Route path="/instructor/announcements" element={<Announcements />} />
             <Route path="/instructor/maintenance" element={<MaintenanceReporting />} />
             <Route path="/instructor/grades" element={<GradeManagement />} />
@@ -96,6 +100,7 @@ function App() {
             <Route path="/ta/dashboard" element={<TADashboard />} />
             <Route path="/ta/my-courses" element={<TAMyCourses />} />
             <Route path="/ta/course/:assignmentId" element={<TACourseDashboard />} />
+            <Route path="/ta/profile" element={<TAProfile />} />
           </Route>
 
           {/* HR Routes */}
@@ -135,6 +140,7 @@ function App() {
             <Route path="/parent" element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
             <Route path="/parent/child-progress/:childId" element={<ParentChildProgress />} />
+            <Route path="/parent/messages" element={<ParentMessages />} />
           </Route>
 
           {/* HR Routes */}
