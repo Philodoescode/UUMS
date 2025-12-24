@@ -32,6 +32,7 @@ export const ADMIN_LINKS: NavLink[] = [
  */
 export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/dashboard", label: "Dashboard" },
+  { href: "/instructor/profile", label: "My Profile" },
   { href: "/instructor/announcements", label: "Announcements" },
   { href: "/instructor/grades", label: "Grade Management" },
   { href: "/instructor/my-courses", label: "My Courses" },
@@ -74,4 +75,14 @@ export const HR_LINKS: NavLink[] = [
  */
 export const PARENT_LINKS: NavLink[] = [
   { href: "/parent/dashboard", label: "Dashboard" },
+];
+
+/**
+ * TA Navbar
+ * Focused on TA-specific functions.
+ */
+export const TA_LINKS: NavLink[] = [
+  { href: "/ta/dashboard", label: "Dashboard" },
+  { href: "/ta/profile", label: "My Profile" },
+  { href: "/parent/messages", label: "Messages" },
 ];

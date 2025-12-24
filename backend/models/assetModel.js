@@ -35,17 +35,11 @@ const Asset = sequelize.define('Asset', {
     },
     purchaseDate: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
-        validate: {
-            isDate: { msg: 'Purchase date must be a valid date' },
-        },
+        allowNull: true,  // Changed to allow null for existing data compatibility
     },
     value: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        validate: {
-            min: 0,
-        },
+        allowNull: true,  // Changed to allow null for existing data compatibility
     },
     currentHolderId: {
         type: DataTypes.UUID,
