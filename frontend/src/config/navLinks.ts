@@ -43,6 +43,7 @@ export const INSTRUCTOR_LINKS: NavLink[] = [
   { href: "/instructor/leave-requests", label: "Leave Requests" },
   { href: "/instructor/benefits", label: "Benefits & Insurance" },
   { href: "/instructor/payroll", label: "Payroll/Compensation" },
+  { href: "/instructor/performance", label: "Staff Performance" },
   { href: "/instructor/maintenance", label: "Maintenance" },
 ];
 

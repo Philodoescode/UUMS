@@ -5,6 +5,7 @@ const {
     getCourseStudents,
     assignGrade,
     getCourseAuditLog,
+    getStaffPerformance,
 } = require('../controllers/instructorPortalController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -23,5 +24,8 @@ router.put('/enrollments/:enrollmentId/grade', assignGrade);
 
 // Get audit log for a course
 router.get('/courses/:courseId/audit-log', getCourseAuditLog);
+
+// Get staff performance
+router.get('/performance', getStaffPerformance);
 
 module.exports = router;
