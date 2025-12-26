@@ -415,17 +415,17 @@ async function testFacilityEquipmentEav() {
   if (typeof FacilityEquipmentService.updateFacilityEquipment === 'function' && equipment.length > 0) {
     const updateResult = await FacilityEquipmentService.updateFacilityEquipment(
       facilityId,
-      equipment[0].groupId,
+      equipment[0].id,
       { quantity: 3 }
     );
     assert(updateResult !== null, 'Update facility equipment');
   }
   
   // Test DELETE (if available)
-  if (typeof FacilityEquipmentService.removeFacilityEquipment === 'function' && equipment.length > 0) {
-    const deleteResult = await FacilityEquipmentService.removeFacilityEquipment(
+  if (typeof FacilityEquipmentService.deleteFacilityEquipment === 'function' && equipment.length > 0) {
+    const deleteResult = await FacilityEquipmentService.deleteFacilityEquipment(
       facilityId,
-      equipment[0].groupId
+      equipment[0].id
     );
     assert(deleteResult !== null, 'Remove facility equipment');
   }

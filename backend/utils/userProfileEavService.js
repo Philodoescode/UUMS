@@ -409,6 +409,15 @@ function prepareValueColumns(value, valueType) {
  * @returns {Promise<object>} Results for each attribute
  */
 async function bulkSetUserProfile(userId, attributes) {
+  // Handle empty attributes object
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return {
+      success: true,
+      data: [],
+      processedCount: 0,
+    };
+  }
+
   const transaction = await sequelize.transaction();
 
   try {

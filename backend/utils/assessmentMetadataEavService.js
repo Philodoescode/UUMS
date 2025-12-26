@@ -77,7 +77,7 @@ async function getAssessmentMetadata(assessmentId) {
         attrValue = value.valueString;
         break;
       case 'integer':
-        attrValue = value.valueInteger;
+        attrValue = value.valueInteger !== null ? parseInt(value.valueInteger, 10) : null;
         break;
       case 'decimal':
         attrValue = parseFloat(value.valueDecimal);
@@ -152,7 +152,7 @@ async function getAssessmentMetadataWithDetails(assessmentId) {
     let value;
     switch (v.valueType) {
       case 'string': value = v.valueString; break;
-      case 'integer': value = v.valueInteger; break;
+      case 'integer': value = v.valueInteger !== null ? parseInt(v.valueInteger, 10) : null; break;
       case 'decimal': value = parseFloat(v.valueDecimal); break;
       case 'boolean': value = v.valueBoolean; break;
       case 'text': value = v.valueText; break;

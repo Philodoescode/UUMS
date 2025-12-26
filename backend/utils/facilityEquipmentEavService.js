@@ -114,7 +114,8 @@ async function getEquipmentFromEav(facilityId) {
         attrValue = value.valueString;
         break;
       case 'integer':
-        attrValue = value.valueInteger;
+        // PostgreSQL returns integers as strings in raw queries, so parse them
+        attrValue = value.valueInteger !== null ? parseInt(value.valueInteger, 10) : null;
         break;
       case 'text':
         attrValue = value.valueText;

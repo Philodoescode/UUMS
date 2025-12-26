@@ -108,11 +108,28 @@ async function setupTestData() {
     );
 
     if (!existingCourse) {
-      // Create a minimal test course
+      // Get a department for the course (required foreign key)
+      const [dept] = await sequelize.query(
+        `SELECT id FROM departments LIMIT 1`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      
+      if (!dept) {
+        log('No departments found - creating test department');
+        const deptId = uuidv4();
+        await sequelize.query(
+          `INSERT INTO departments (id, name, code, "isActive", "createdAt", "updatedAt")
+           VALUES (:id, 'Test Department', 'TEST', true, NOW(), NOW())`,
+          { replacements: { id: deptId } }
+        );
+        dept = { id: deptId };
+      }
+      
+      // Create a minimal test course (includes all required columns)
       await sequelize.query(
-        `INSERT INTO courses (id, "courseCode", title, description, credits, "isActive", "createdAt", "updatedAt")
-         VALUES (:id, 'TEST101', 'Test Course', 'A test course', 3, true, NOW(), NOW())`,
-        { replacements: { id: TEST_COURSE_ID } }
+        `INSERT INTO courses (id, "courseCode", name, description, credits, "departmentId", semester, year, capacity, "isActive", "createdAt", "updatedAt")
+         VALUES (:id, 'TEST101', 'Test Course', 'A test course', 3, :deptId, 'Fall', 2025, 30, true, NOW(), NOW())`,
+        { replacements: { id: TEST_COURSE_ID, deptId: dept.id } }
       );
       log('Test course created');
     }
