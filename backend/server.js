@@ -94,9 +94,26 @@ const startServer = async () => {
     // Connect to Database
     await connectDB();
 
-    // Sync models with database (creates tables if they don't exist)
-    await sequelize.sync({ alter: true });
-    console.log('Database synchronized.');
+    // Database Synchronization Strategy
+    // ⚠️  IMPORTANT: Use migrations for production deployments
+    const NODE_ENV = process.env.NODE_ENV || 'development';
+    
+    if (NODE_ENV === 'production') {
+      // Production: Never auto-sync, use migrations only
+      console.log('🚫 Production mode: Auto-sync disabled. Use "npm run migrate:up" to apply migrations.');
+      console.log('💡 Ensure all migrations are run before starting the server.');
+    } else {
+      // Development: Allow controlled sync
+      const ENABLE_SYNC = process.env.ENABLE_SYNC !== 'false'; // Default to true in development
+      
+      if (ENABLE_SYNC) {
+        console.log('⚙️  Development mode: Running database sync...');
+        await sequelize.sync({ alter: true });
+        console.log('✅ Database synchronized.');
+      } else {
+        console.log('🔒 Sync disabled via ENABLE_SYNC=false. Using migrations only.');
+      }
+    }
 
     // Run Seeder (Creates dummy accounts if missing)
     await seedDatabase();
