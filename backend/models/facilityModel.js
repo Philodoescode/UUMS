@@ -84,7 +84,12 @@ const Facility = sequelize.define('Facility', {
   equipmentList: {
     type: DataTypes.TEXT,
     allowNull: true,
-    comment: 'JSON string of available equipment',
+    comment: 'DEPRECATED: Legacy equipment storage. Use EAV tables via facilityEquipmentEavService. Will be removed after 2 sprints.',
+  },
+  equipmentEavMigrated: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Flag indicating if equipment data has been migrated to EAV tables',
   },
   isActive: {
     type: DataTypes.BOOLEAN,

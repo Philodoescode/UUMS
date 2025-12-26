@@ -1,5 +1,6 @@
 const { Assessment, AssessmentSubmission, Enrollment, Course, User } = require('../models');
 const { Op } = require('sequelize');
+const assessmentMetadataService = require('../utils/assessmentMetadataEavService');
 
 // @desc    Create a new assessment
 // @route   POST /api/assessments
@@ -335,10 +336,164 @@ const getSubmission = async (req, res) => {
     }
 };
 
+// ============================================================================
+// Assessment Metadata (EAV) Operations
+// ============================================================================
+
+// @desc    Get all metadata for an assessment
+// @route   GET /api/assessments/:id/metadata
+const getAssessmentMetadata = async (req, res) => {
+    try {
+        const assessmentId = req.params.id;
+
+        const assessment = await Assessment.findByPk(assessmentId);
+        if (!assessment) {
+            return res.status(404).json({ message: 'Assessment not found' });
+        }
+
+        // Students shouldn't see instructor-only metadata
+        const metadata = await assessmentMetadataService.getAssessmentMetadata(assessmentId);
+        
+        // Filter out instructor-only fields for students
+        if (req.user.role.name === 'student') {
+            delete metadata.instructorNotes;
+        }
+
+        res.json({
+            assessmentId,
+            metadata,
+        });
+    } catch (error) {
+        console.error('Error fetching assessment metadata:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get metadata with full attribute details (instructors only)
+// @route   GET /api/assessments/:id/metadata/details
+const getAssessmentMetadataDetails = async (req, res) => {
+    try {
+        // Only instructors and admins can see full details
+        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const assessmentId = req.params.id;
+
+        const assessment = await Assessment.findByPk(assessmentId);
+        if (!assessment) {
+            return res.status(404).json({ message: 'Assessment not found' });
+        }
+
+        const metadata = await assessmentMetadataService.getAssessmentMetadataWithDetails(assessmentId);
+
+        res.json({
+            assessmentId,
+            metadata,
+        });
+    } catch (error) {
+        console.error('Error fetching assessment metadata details:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Set metadata for an assessment
+// @route   PUT /api/assessments/:id/metadata
+const setAssessmentMetadata = async (req, res) => {
+    try {
+        // Only instructors and admins can set metadata
+        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to modify assessment metadata' });
+        }
+
+        const assessmentId = req.params.id;
+
+        const assessment = await Assessment.findByPk(assessmentId);
+        if (!assessment) {
+            return res.status(404).json({ message: 'Assessment not found' });
+        }
+
+        const metadata = req.body;
+        if (!metadata || Object.keys(metadata).length === 0) {
+            return res.status(400).json({ message: 'Metadata object is required' });
+        }
+
+        // Bulk set metadata
+        const results = await assessmentMetadataService.bulkSetAssessmentMetadata(assessmentId, metadata);
+
+        // Mark assessment as having EAV metadata enabled
+        if (!assessment.metadataEavEnabled) {
+            await assessment.update({ metadataEavEnabled: true });
+        }
+
+        res.json({
+            assessmentId,
+            results,
+        });
+    } catch (error) {
+        console.error('Error setting assessment metadata:', error);
+        if (error.message.includes('not found')) {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Delete a specific metadata attribute from an assessment
+// @route   DELETE /api/assessments/:id/metadata/:attributeName
+const deleteAssessmentMetadata = async (req, res) => {
+    try {
+        // Only instructors and admins can delete metadata
+        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const assessmentId = req.params.id;
+        const attributeName = req.params.attributeName;
+
+        const assessment = await Assessment.findByPk(assessmentId);
+        if (!assessment) {
+            return res.status(404).json({ message: 'Assessment not found' });
+        }
+
+        // Convert camelCase to snake_case for attribute lookup
+        const snakeCaseName = attributeName.replace(/([A-Z])/g, '_$1').toLowerCase();
+
+        const deleted = await assessmentMetadataService.deleteAssessmentMetadata(assessmentId, snakeCaseName);
+
+        if (!deleted) {
+            return res.status(404).json({ message: 'Metadata attribute not found' });
+        }
+
+        res.json({ message: 'Metadata deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting assessment metadata:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get available metadata attributes
+// @route   GET /api/assessments/metadata/attributes
+const getAvailableMetadataAttributes = async (req, res) => {
+    try {
+        const attributes = await assessmentMetadataService.getAvailableMetadataAttributes();
+        res.json(attributes);
+    } catch (error) {
+        console.error('Error fetching available metadata attributes:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     createAssessment,
     getAssessmentsByCourse,
     startAssessment,
     submitAssessment,
-    getSubmission
+    getSubmission,
+    // Metadata EAV operations
+    getAssessmentMetadata,
+    getAssessmentMetadataDetails,
+    setAssessmentMetadata,
+    deleteAssessmentMetadata,
+    getAvailableMetadataAttributes,
 };

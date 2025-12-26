@@ -9,6 +9,11 @@ const {
   updateFacilityStatus,
   getFacilityBookings,
   createBooking,
+  // Equipment EAV operations
+  getFacilityEquipment,
+  addFacilityEquipment,
+  updateFacilityEquipment,
+  deleteFacilityEquipment,
 } = require('../controllers/facilityController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -21,6 +26,12 @@ router.get('/bookings', getFacilityBookings);
 // GET routes - accessible to all authenticated users
 router.get('/', getAllFacilities);
 router.get('/:id', getFacilityById);
+
+// Equipment routes (EAV-based)
+router.get('/:id/equipment', getFacilityEquipment);
+router.post('/:id/equipment', authorize('admin'), addFacilityEquipment);
+router.put('/:id/equipment/:equipmentId', authorize('admin'), updateFacilityEquipment);
+router.delete('/:id/equipment/:equipmentId', authorize('admin'), deleteFacilityEquipment);
 
 // Modification routes - admin only
 router.post('/', authorize('admin'), createFacility);
