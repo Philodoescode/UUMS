@@ -1,4 +1,4 @@
-const { Enrollment, User, Course, Department, Instructor, CourseInstructor, GradeAuditLog, Role } = require('../models');
+const { Enrollment, User, Course, Department, Instructor, CourseInstructor, GradeAuditLog, Role, StudentFeedback, ProfessionalDevelopment, ResearchPublication } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Get courses the advisor oversees (is assigned to as instructor)
@@ -198,9 +198,51 @@ const getCourseAuditLog = async (req, res) => {
     }
 };
 
+// @desc    Get staff performance data (Evaluations, PD, Research)
+// @route   GET /api/instructor-portal/performance
+const getStaffPerformance = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Evaluations (Student Feedback)
+        const feedback = await StudentFeedback.findAll({
+            where: { targetUserId: userId },
+            include: [
+                { model: Course, as: 'course', attributes: ['courseCode', 'name'] }
+            ],
+            order: [['year', 'DESC'], ['semester', 'DESC']]
+        });
+
+        // 2. Professional Development
+        const pdRecords = await ProfessionalDevelopment.findAll({
+            where: { userId },
+            order: [['completionDate', 'DESC']]
+        });
+
+        // 3. Research Publications (Approved)
+        const research = await ResearchPublication.findAll({
+            where: {
+                userId,
+                status: 'Approved'
+            },
+            order: [['publicationDate', 'DESC']]
+        });
+
+        res.json({
+            evaluations: feedback,
+            professionalDevelopment: pdRecords,
+            research: research
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getInstructorCourses,
     getCourseStudents,
     assignGrade,
     getCourseAuditLog,
+    getStaffPerformance,
 };

@@ -52,7 +52,8 @@ import InstructorBenefitsInsurance from "@/pages/instructor/BenefitsInsurance";
 import TABenefitsInsurance from "@/pages/ta/BenefitsInsurance";
 import StaffProfile from "@/pages/student/StaffProfile";
 import PayrollPage from "@/pages/instructor/PayrollPage";
-import StaffPerformance from "@/pages/ta/StaffPerformance";
+import TAStaffPerformance from "@/pages/ta/StaffPerformance";
+import InstructorStaffPerformance from "@/pages/StaffPerformance";
 import './App.css'
 
 function App() {
@@ -107,6 +108,7 @@ function App() {
             <Route path="/instructor/messages" element={<InstructorMessages />} />
             <Route path="/instructor/meeting-requests" element={<MeetingRequestsReview />} />
             <Route path="/instructor/payroll" element={<PayrollPage />} />
+            <Route path="/instructor/performance" element={<InstructorStaffPerformance />} />
           </Route>
 
           {/* TA Routes */}
@@ -118,7 +120,7 @@ function App() {
             <Route path="/ta/profile" element={<TAProfile />} />
             <Route path="/ta/leave-requests" element={<TALeaveRequests />} />
             <Route path="/ta/benefits" element={<TABenefitsInsurance />} />
-            <Route path="/ta/performance" element={<StaffPerformance />} />
+            <Route path="/ta/performance" element={<TAStaffPerformance />} />
             <Route path="/ta/payroll" element={<PayrollPage />} />
           </Route>
 
