@@ -8,6 +8,8 @@ This directory contains Sequelize CLI migration files for the UUMS database sche
 
 ⚠️ **Always test migrations in development before running in production!**
 
+⚠️ **sequelize.sync() has been removed - use migrations only!**
+
 ## Migration Naming Convention
 
 Migrations are named with this pattern:
@@ -16,6 +18,14 @@ YYYYMMDDHHMMSS-description.js
 ```
 
 Example: `20251226172345-add-status-to-users.js`
+
+## Current Migrations
+
+| File | Description |
+|------|-------------|
+| `20250701000000-create-eav-tables.js` | Creates EAV infrastructure (entity_types, attribute_definitions, attribute_values) |
+| `20250701000001-add-profile-eav-enabled-to-users.js` | Adds profileEavEnabled column to users table |
+| `20250701000002-add-eav-migration-flags.js` | Adds EAV migration flags to facilities, instructors, assessments |
 
 ## How Migrations Work
 
@@ -27,26 +37,50 @@ Example: `20251226172345-add-status-to-users.js`
 
 See the [Migration Guide](../docs/MIGRATION_GUIDE.md) for detailed instructions.
 
-Quick commands:
+Quick commands (using pnpm):
 ```bash
 # Run pending migrations
-npm run migrate:up
+pnpm run migrate:up
 
 # Check status
-npm run migrate:status
+pnpm run migrate:status
 
 # Rollback last migration
-npm run migrate:undo
+pnpm run migrate:undo
+
+# Rollback all migrations
+pnpm run migrate:undo:all
+
+# Reset database (undo all + apply all)
+pnpm run db:reset
 ```
 
 ## Creating Migrations
 
 Create a new migration:
 ```bash
-npm run migrate:create your-migration-name
+pnpm run migrate:create your-migration-name
 ```
 
 This generates a template file in this directory that you can edit.
+
+## EAV Setup After Migrations
+
+After running migrations, configure EAV entity types and attributes:
+
+```bash
+# Setup User Profile EAV
+pnpm run eav:setup:user
+
+# Setup Assessment Metadata EAV
+pnpm run eav:setup:assessment
+
+# Migrate Facility Equipment to EAV
+pnpm run eav:migrate:facility
+
+# Migrate Instructor Awards to EAV
+pnpm run eav:migrate:instructor
+```
 
 ## Baseline Migration
 
