@@ -39,6 +39,11 @@ const StudentFeedback = require('./studentFeedbackModel');
 const ProfessionalDevelopment = require('./professionalDevelopmentModel');
 const ResearchPublication = require('./researchPublicationModel');
 
+// ===== EAV (Entity-Attribute-Value) Models =====
+const EntityType = require('./entityTypeModel');
+const AttributeDefinition = require('./attributeDefinitionModel');
+const AttributeValue = require('./attributeValueModel');
+
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
   through: ParentStudent,
@@ -298,6 +303,13 @@ ProfessionalDevelopment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(ResearchPublication, { foreignKey: 'userId', as: 'researchPublications' });
 ResearchPublication.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// ===== EAV (Entity-Attribute-Value) Associations =====
+EntityType.hasMany(AttributeDefinition, { foreignKey: 'entityTypeId', as: 'attributes' });
+AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'entityType' });
+
+AttributeDefinition.hasMany(AttributeValue, { foreignKey: 'attributeId', as: 'values' });
+AttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
 module.exports = {
   sequelize,
   User,
@@ -338,4 +350,7 @@ module.exports = {
   StudentFeedback,
   ProfessionalDevelopment,
   ResearchPublication,
+  EntityType,
+  AttributeDefinition,
+  AttributeValue,
 };
