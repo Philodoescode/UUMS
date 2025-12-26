@@ -26,6 +26,8 @@ Example: `20251226172345-add-status-to-users.js`
 | `20250701000000-create-eav-tables.js` | Creates EAV infrastructure (entity_types, attribute_definitions, attribute_values) |
 | `20250701000001-add-profile-eav-enabled-to-users.js` | Adds profileEavEnabled column to users table |
 | `20250701000002-add-eav-migration-flags.js` | Adds EAV migration flags to facilities, instructors, assessments |
+| `20250701000003-multi-role-eav-permissions.js` | Adds multi-role EAV permissions |
+| `20250701000004-add-attribute-values-constraints.js` | Adds unique constraint and entity validation for attribute_values |
 
 ## How Migrations Work
 

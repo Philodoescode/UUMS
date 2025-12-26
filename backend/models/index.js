@@ -317,6 +317,84 @@ AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'ent
 AttributeDefinition.hasMany(AttributeValue, { foreignKey: 'attributeId', as: 'values' });
 AttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
 
+// ===== EAV Cascade Delete Hooks =====
+// Clean up orphaned attribute_values when parent entities are deleted
+// This implements application-level cascade delete for the polymorphic EAV relationship
+
+/**
+ * Helper function to delete attribute values for a given entity
+ * Uses soft delete (paranoid) to match the model's deletion behavior
+ */
+async function deleteAttributeValuesForEntity(entityType, entityId, options = {}) {
+  const { transaction = null } = options;
+  
+  try {
+    await AttributeValue.update(
+      { deletedAt: new Date() },
+      {
+        where: {
+          entityType,
+          entityId,
+          deletedAt: null,
+        },
+        transaction,
+      }
+    );
+  } catch (error) {
+    console.error(`Error cleaning up attribute values for ${entityType}:${entityId}:`, error.message);
+    // Don't throw - allow parent delete to proceed
+  }
+}
+
+// User deletion hook - clean up User EAV attributes
+User.beforeDestroy(async (user, options) => {
+  await deleteAttributeValuesForEntity('User', user.id, options);
+});
+
+// Role deletion hook - clean up Role EAV attributes (permissions)
+Role.beforeDestroy(async (role, options) => {
+  await deleteAttributeValuesForEntity('Role', role.id, options);
+});
+
+// Course deletion hook - clean up Course EAV attributes
+Course.beforeDestroy(async (course, options) => {
+  await deleteAttributeValuesForEntity('Course', course.id, options);
+});
+
+// Department deletion hook - clean up Department EAV attributes
+Department.beforeDestroy(async (department, options) => {
+  await deleteAttributeValuesForEntity('Department', department.id, options);
+});
+
+// Instructor deletion hook - clean up Instructor EAV attributes
+Instructor.beforeDestroy(async (instructor, options) => {
+  await deleteAttributeValuesForEntity('Instructor', instructor.id, options);
+});
+
+// Bulk delete hooks for operations that don't trigger individual hooks
+User.beforeBulkDestroy(async (options) => {
+  if (options.where && options.where.id) {
+    const ids = Array.isArray(options.where.id) ? options.where.id : [options.where.id];
+    for (const id of ids) {
+      await deleteAttributeValuesForEntity('User', id, options);
+    }
+  }
+});
+
+Role.beforeBulkDestroy(async (options) => {
+  if (options.where && options.where.id) {
+    const ids = Array.isArray(options.where.id) ? options.where.id : [options.where.id];
+    for (const id of ids) {
+      await deleteAttributeValuesForEntity('Role', id, options);
+    }
+  }
+});
+
+// Export the helper function for manual cleanup if needed
+const eavHelpers = {
+  deleteAttributeValuesForEntity,
+};
+
 module.exports = {
   sequelize,
   User,
@@ -360,4 +438,5 @@ module.exports = {
   EntityType,
   AttributeDefinition,
   AttributeValue,
+  eavHelpers,
 };

@@ -210,7 +210,10 @@ function extractValue(record) {
 }
 
 /**
- * Set a single profile attribute
+ * Set a single profile attribute using upsert pattern
+ * Uses PostgreSQL ON CONFLICT for atomic upsert to prevent race conditions
+ * and work with the unique constraint on (entityType, entityId, attributeId)
+ * 
  * @param {string} userId - The user's UUID
  * @param {string} attributeName - The attribute name (snake_case)
  * @param {any} value - The value to set
@@ -255,74 +258,52 @@ async function setUserProfileAttribute(userId, attributeName, value) {
       throw new Error(`Attribute '${attributeName}' is required`);
     }
 
-    // Check for existing value
-    const [existingValue] = await sequelize.query(
-      `SELECT id FROM attribute_values 
-       WHERE "attributeId" = :attributeId 
-         AND "entityId" = :entityId 
-         AND "entityType" = :entityType
-         AND "deletedAt" IS NULL`,
+    // Prepare value columns
+    const valueColumns = prepareValueColumns(value, attrDef.valueType);
+    const newId = uuidv4();
+
+    // Use upsert pattern with ON CONFLICT
+    // This handles the case where a record might exist (including soft-deleted ones)
+    // First, try to "revive" a soft-deleted record or update existing
+    const [upsertResult] = await sequelize.query(
+      `INSERT INTO attribute_values 
+       (id, "attributeId", "entityType", "entityId", "valueType",
+        "valueString", "valueInteger", "valueDecimal", "valueBoolean",
+        "valueDate", "valueDatetime", "valueText", "valueJson",
+        "sortOrder", "createdAt", "updatedAt", "deletedAt")
+       VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
+               :valueString, :valueInteger, :valueDecimal, :valueBoolean,
+               :valueDate, :valueDatetime, :valueText, :valueJson,
+               0, NOW(), NOW(), NULL)
+       ON CONFLICT ("entityType", "entityId", "attributeId") 
+       WHERE "deletedAt" IS NULL
+       DO UPDATE SET
+         "valueString" = EXCLUDED."valueString",
+         "valueInteger" = EXCLUDED."valueInteger",
+         "valueDecimal" = EXCLUDED."valueDecimal",
+         "valueBoolean" = EXCLUDED."valueBoolean",
+         "valueDate" = EXCLUDED."valueDate",
+         "valueDatetime" = EXCLUDED."valueDatetime",
+         "valueText" = EXCLUDED."valueText",
+         "valueJson" = EXCLUDED."valueJson",
+         "updatedAt" = NOW()
+       RETURNING id, (xmax = 0) AS inserted`,
       {
-        replacements: { 
-          attributeId: attrDef.id, 
-          entityId: userId, 
-          entityType: ENTITY_TYPE_NAME 
+        replacements: {
+          id: newId,
+          attributeId: attrDef.id,
+          entityType: ENTITY_TYPE_NAME,
+          entityId: userId,
+          valueType: attrDef.valueType,
+          ...valueColumns,
         },
         type: sequelize.QueryTypes.SELECT,
         transaction,
       }
     );
 
-    // Prepare value columns
-    const valueColumns = prepareValueColumns(value, attrDef.valueType);
-    let resultId;
-
-    if (existingValue) {
-      // Update existing
-      await sequelize.query(
-        `UPDATE attribute_values 
-         SET "valueString" = :valueString,
-             "valueInteger" = :valueInteger,
-             "valueDecimal" = :valueDecimal,
-             "valueBoolean" = :valueBoolean,
-             "valueDate" = :valueDate,
-             "valueDatetime" = :valueDatetime,
-             "valueText" = :valueText,
-             "valueJson" = :valueJson,
-             "updatedAt" = NOW()
-         WHERE id = :id`,
-        {
-          replacements: { id: existingValue.id, ...valueColumns },
-          transaction,
-        }
-      );
-      resultId = existingValue.id;
-    } else {
-      // Insert new
-      resultId = uuidv4();
-      await sequelize.query(
-        `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt")
-         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
-                 0, NOW(), NOW())`,
-        {
-          replacements: {
-            id: resultId,
-            attributeId: attrDef.id,
-            entityType: ENTITY_TYPE_NAME,
-            entityId: userId,
-            valueType: attrDef.valueType,
-            ...valueColumns,
-          },
-          transaction,
-        }
-      );
-    }
+    const resultId = upsertResult?.id || newId;
+    const wasInserted = upsertResult?.inserted === true;
 
     // Mark user as having EAV profile
     await sequelize.query(
@@ -338,7 +319,7 @@ async function setUserProfileAttribute(userId, attributeName, value) {
         id: resultId,
         attributeName,
         value,
-        action: existingValue ? 'updated' : 'created',
+        action: wasInserted ? 'created' : 'updated',
       },
     };
 
@@ -458,30 +439,9 @@ async function bulkSetUserProfile(userId, attributes) {
     );
 
     const attrDefMap = new Map(attrDefs.map(a => [a.name, a]));
-
-    // Get existing values
-    const existingValues = await sequelize.query(
-      `SELECT av.id, ad.name as "attributeName"
-       FROM attribute_values av
-       JOIN attribute_definitions ad ON av."attributeId" = ad.id
-       WHERE ad."entityTypeId" = :entityTypeId
-         AND av."entityId" = :entityId 
-         AND av."entityType" = :entityType
-         AND av."deletedAt" IS NULL`,
-      {
-        replacements: { 
-          entityTypeId: entityType.id, 
-          entityId: userId, 
-          entityType: ENTITY_TYPE_NAME 
-        },
-        type: sequelize.QueryTypes.SELECT,
-        transaction,
-      }
-    );
-
-    const existingMap = new Map(existingValues.map(e => [e.attributeName, e.id]));
     const results = {};
 
+    // Use upsert pattern for each attribute
     for (const [attributeName, value] of Object.entries(normalizedAttributes)) {
       const attrDef = attrDefMap.get(attributeName);
       if (!attrDef) {
@@ -490,53 +450,49 @@ async function bulkSetUserProfile(userId, attributes) {
       }
 
       const valueColumns = prepareValueColumns(value, attrDef.valueType);
-      const existingId = existingMap.get(attributeName);
+      const newId = uuidv4();
 
-      if (existingId) {
-        await sequelize.query(
-          `UPDATE attribute_values 
-           SET "valueString" = :valueString,
-               "valueInteger" = :valueInteger,
-               "valueDecimal" = :valueDecimal,
-               "valueBoolean" = :valueBoolean,
-               "valueDate" = :valueDate,
-               "valueDatetime" = :valueDatetime,
-               "valueText" = :valueText,
-               "valueJson" = :valueJson,
-               "updatedAt" = NOW()
-           WHERE id = :id`,
-          {
-            replacements: { id: existingId, ...valueColumns },
-            transaction,
-          }
-        );
-        results[attributeName] = { id: existingId, action: 'updated' };
-      } else {
-        const newId = uuidv4();
-        await sequelize.query(
-          `INSERT INTO attribute_values 
-           (id, "attributeId", "entityType", "entityId", "valueType",
-            "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-            "valueDate", "valueDatetime", "valueText", "valueJson",
-            "sortOrder", "createdAt", "updatedAt")
-           VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                   :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                   :valueDate, :valueDatetime, :valueText, :valueJson,
-                   0, NOW(), NOW())`,
-          {
-            replacements: {
-              id: newId,
-              attributeId: attrDef.id,
-              entityType: ENTITY_TYPE_NAME,
-              entityId: userId,
-              valueType: attrDef.valueType,
-              ...valueColumns,
-            },
-            transaction,
-          }
-        );
-        results[attributeName] = { id: newId, action: 'created' };
-      }
+      // Use upsert with ON CONFLICT for atomic operation
+      const [upsertResult] = await sequelize.query(
+        `INSERT INTO attribute_values 
+         (id, "attributeId", "entityType", "entityId", "valueType",
+          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
+          "valueDate", "valueDatetime", "valueText", "valueJson",
+          "sortOrder", "createdAt", "updatedAt", "deletedAt")
+         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
+                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
+                 :valueDate, :valueDatetime, :valueText, :valueJson,
+                 0, NOW(), NOW(), NULL)
+         ON CONFLICT ("entityType", "entityId", "attributeId") 
+         WHERE "deletedAt" IS NULL
+         DO UPDATE SET
+           "valueString" = EXCLUDED."valueString",
+           "valueInteger" = EXCLUDED."valueInteger",
+           "valueDecimal" = EXCLUDED."valueDecimal",
+           "valueBoolean" = EXCLUDED."valueBoolean",
+           "valueDate" = EXCLUDED."valueDate",
+           "valueDatetime" = EXCLUDED."valueDatetime",
+           "valueText" = EXCLUDED."valueText",
+           "valueJson" = EXCLUDED."valueJson",
+           "updatedAt" = NOW()
+         RETURNING id, (xmax = 0) AS inserted`,
+        {
+          replacements: {
+            id: newId,
+            attributeId: attrDef.id,
+            entityType: ENTITY_TYPE_NAME,
+            entityId: userId,
+            valueType: attrDef.valueType,
+            ...valueColumns,
+          },
+          type: sequelize.QueryTypes.SELECT,
+          transaction,
+        }
+      );
+
+      const resultId = upsertResult?.id || newId;
+      const wasInserted = upsertResult?.inserted === true;
+      results[attributeName] = { id: resultId, action: wasInserted ? 'created' : 'updated' };
     }
 
     // Mark user as having EAV profile

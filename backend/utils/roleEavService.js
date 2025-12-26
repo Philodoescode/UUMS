@@ -144,7 +144,10 @@ async function getRolePermission(roleId, permissionName) {
 }
 
 /**
- * Set a permission value for a role
+ * Set a permission value for a role using upsert pattern
+ * Uses PostgreSQL ON CONFLICT for atomic upsert to prevent race conditions
+ * and work with the unique constraint on (entityType, entityId, attributeId)
+ * 
  * @param {string} roleId - The role ID
  * @param {string} permissionName - The permission attribute name
  * @param {any} value - The permission value to set
@@ -175,51 +178,115 @@ async function setRolePermission(roleId, permissionName, value) {
     
     const { id: attributeId, valueType } = attrDef[0];
     
-    // Check if value already exists
-    const existingValue = await sequelize.query(
-      `SELECT id FROM attribute_values 
-       WHERE "attributeId" = :attributeId AND "entityType" = 'Role' AND "entityId" = :roleId AND "deletedAt" IS NULL`,
+    // Prepare value columns for upsert
+    const valueColumns = prepareValueColumnsForRole(value, valueType);
+    
+    // Use upsert with ON CONFLICT for atomic operation
+    const [upsertResult] = await sequelize.query(
+      `INSERT INTO attribute_values 
+       (id, "attributeId", "entityType", "entityId", "valueType",
+        "valueString", "valueInteger", "valueDecimal", "valueBoolean",
+        "valueDate", "valueDatetime", "valueText", "valueJson",
+        "sortOrder", "createdAt", "updatedAt", "deletedAt")
+       VALUES (gen_random_uuid(), :attributeId, 'Role', :roleId, :valueType,
+               :valueString, :valueInteger, :valueDecimal, :valueBoolean,
+               :valueDate, :valueDatetime, :valueText, :valueJson,
+               0, NOW(), NOW(), NULL)
+       ON CONFLICT ("entityType", "entityId", "attributeId") 
+       WHERE "deletedAt" IS NULL
+       DO UPDATE SET
+         "valueString" = EXCLUDED."valueString",
+         "valueInteger" = EXCLUDED."valueInteger",
+         "valueDecimal" = EXCLUDED."valueDecimal",
+         "valueBoolean" = EXCLUDED."valueBoolean",
+         "valueDate" = EXCLUDED."valueDate",
+         "valueDatetime" = EXCLUDED."valueDatetime",
+         "valueText" = EXCLUDED."valueText",
+         "valueJson" = EXCLUDED."valueJson",
+         "updatedAt" = NOW()
+       RETURNING id, (xmax = 0) AS inserted`,
       {
+        replacements: {
+          attributeId,
+          roleId,
+          valueType,
+          ...valueColumns,
+        },
         type: QueryTypes.SELECT,
-        replacements: { attributeId, roleId },
         transaction
       }
     );
     
-    const valueColumn = getValueColumn(valueType);
-    const formattedValue = formatValueForInsert(value, valueType);
-    
-    if (existingValue.length > 0) {
-      // Update existing value
-      await sequelize.query(
-        `UPDATE attribute_values 
-         SET ${valueColumn} = ${formattedValue}, "updatedAt" = NOW()
-         WHERE id = :id`,
-        {
-          replacements: { id: existingValue[0].id },
-          transaction
-        }
-      );
-    } else {
-      // Insert new value
-      await sequelize.query(
-        `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType", ${valueColumn}, "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), :attributeId, 'Role', :roleId, :valueType, ${formattedValue}, NOW(), NOW())`,
-        {
-          replacements: { attributeId, roleId, valueType },
-          transaction
-        }
-      );
-    }
-    
     await transaction.commit();
-    return { success: true, data: { name: permissionName, value } };
+    
+    const wasInserted = upsertResult?.inserted === true;
+    return { 
+      success: true, 
+      data: { 
+        name: permissionName, 
+        value,
+        action: wasInserted ? 'created' : 'updated'
+      } 
+    };
   } catch (error) {
     await transaction.rollback();
     console.error('Error setting role permission:', error);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Prepare value columns for upsert based on value type
+ * @param {any} value - The value to store
+ * @param {string} valueType - The type of the value
+ * @returns {Object} Object with all value columns
+ */
+function prepareValueColumnsForRole(value, valueType) {
+  const columns = {
+    valueString: null,
+    valueInteger: null,
+    valueDecimal: null,
+    valueBoolean: null,
+    valueDate: null,
+    valueDatetime: null,
+    valueText: null,
+    valueJson: null,
+  };
+
+  if (value === null || value === undefined) {
+    return columns;
+  }
+
+  switch (valueType) {
+    case 'string':
+      columns.valueString = String(value).substring(0, 500);
+      break;
+    case 'integer':
+      columns.valueInteger = parseInt(value, 10);
+      break;
+    case 'decimal':
+      columns.valueDecimal = parseFloat(value);
+      break;
+    case 'boolean':
+      columns.valueBoolean = Boolean(value);
+      break;
+    case 'date':
+      columns.valueDate = value instanceof Date ? value.toISOString().split('T')[0] : value;
+      break;
+    case 'datetime':
+      columns.valueDatetime = value instanceof Date ? value : new Date(value);
+      break;
+    case 'text':
+      columns.valueText = String(value);
+      break;
+    case 'json':
+      columns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+      break;
+    default:
+      columns.valueString = String(value).substring(0, 500);
+  }
+
+  return columns;
 }
 
 /**

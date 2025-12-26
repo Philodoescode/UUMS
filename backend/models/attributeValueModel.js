@@ -119,6 +119,19 @@ const AttributeValue = sequelize.define('AttributeValue', {
     {
       fields: ['valueDate'],
     },
+    // Unique constraint: One value per attribute per entity (active records only)
+    // This is also created by migration 20250701000004
+    {
+      name: 'attribute_values_entity_attribute_unique_active',
+      unique: true,
+      fields: ['entityType', 'entityId', 'attributeId'],
+      where: { deletedAt: null },
+    },
+    // Index on deletedAt for efficient partial index queries
+    {
+      name: 'idx_attribute_values_deleted_at',
+      fields: ['deletedAt'],
+    },
   ],
 });
 
