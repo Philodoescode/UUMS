@@ -43,6 +43,16 @@ const Instructor = sequelize.define('Instructor', {
     type: DataTypes.JSONB,
     allowNull: true,
     defaultValue: [],
+    // DEPRECATED: This column is read-only as of migration v1.0.0
+    // Data has been migrated to EAV tables (attribute_values)
+    // Will be removed after 2 sprints. Use EAV services for new award data.
+    comment: '[DEPRECATED - READ-ONLY FALLBACK] Migrated to EAV tables. Use AttributeValue table for new data.',
+  },
+  // Flag to track if awards have been migrated to EAV
+  awardsEavMigrated: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Indicates if this instructor awards data has been migrated to EAV tables',
   },
 }, {
   tableName: 'instructors',
