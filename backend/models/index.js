@@ -44,6 +44,10 @@ const EntityType = require('./entityTypeModel');
 const AttributeDefinition = require('./attributeDefinitionModel');
 const AttributeValue = require('./attributeValueModel');
 
+// ===== Entity-Specific EAV Models =====
+const UserAttributeValue = require('./userAttributeValueModel');
+const RoleAttributeValue = require('./roleAttributeValueModel');
+
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
   through: ParentStudent,
@@ -317,6 +321,21 @@ AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'ent
 AttributeDefinition.hasMany(AttributeValue, { foreignKey: 'attributeId', as: 'values' });
 AttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
 
+// ===== Entity-Specific EAV Associations =====
+// User attribute values (entity-specific table with proper FK)
+User.hasMany(UserAttributeValue, { foreignKey: 'userId', as: 'attributeValues' });
+UserAttributeValue.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+AttributeDefinition.hasMany(UserAttributeValue, { foreignKey: 'attributeId', as: 'userValues' });
+UserAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
+// Role attribute values (entity-specific table with proper FK)
+Role.hasMany(RoleAttributeValue, { foreignKey: 'roleId', as: 'attributeValues' });
+RoleAttributeValue.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
+
+AttributeDefinition.hasMany(RoleAttributeValue, { foreignKey: 'attributeId', as: 'roleValues' });
+RoleAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attributeDefinition' });
+
 // ===== EAV Cascade Delete Hooks =====
 // Clean up orphaned attribute_values when parent entities are deleted
 // This implements application-level cascade delete for the polymorphic EAV relationship
@@ -438,5 +457,8 @@ module.exports = {
   EntityType,
   AttributeDefinition,
   AttributeValue,
+  // Entity-Specific EAV Models
+  UserAttributeValue,
+  RoleAttributeValue,
   eavHelpers,
 };

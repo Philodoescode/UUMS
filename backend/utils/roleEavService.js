@@ -10,17 +10,67 @@
  * - Aggregate permissions across multiple roles (for multi-role users)
  * - Initialize default permissions for new roles
  * 
- * EAV Entity Type: 'Role'
- * Permission attributes are stored in attribute_values with entityType='Role'
+ * === Entity-Specific Table Support ===
+ * This service now supports both the generic attribute_values table and
+ * the entity-specific role_attribute_values table. The feature flag
+ * `useEntitySpecificTable` on the EntityType determines which is used.
+ * 
+ * Benefits of entity-specific table:
+ * - Proper foreign key constraints with CASCADE delete
+ * - Better query performance (direct join vs polymorphic lookup)
+ * - Database-enforced referential integrity
+ * - No polymorphic entityType/entityId columns needed
  */
 
 const { sequelize } = require('../config/db');
 const { QueryTypes } = require('sequelize');
 
+const ENTITY_TYPE_NAME = 'Role';
+
 // Cache for attribute definitions to reduce database queries
 let attributeDefinitionCache = null;
 let cacheTimestamp = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Cache for entity type configuration
+let entityTypeCache = null;
+let entityTypeCacheTimestamp = null;
+
+/**
+ * Get the Role entity type configuration, including feature flags
+ * @returns {Promise<object|null>} Entity type config or null
+ */
+async function getEntityTypeConfig() {
+  const now = Date.now();
+  
+  if (entityTypeCache && entityTypeCacheTimestamp && (now - entityTypeCacheTimestamp) < CACHE_TTL) {
+    return entityTypeCache;
+  }
+  
+  const [config] = await sequelize.query(
+    `SELECT id, name, "tableName", "useEntitySpecificTable"
+     FROM entity_types 
+     WHERE name = :name AND "deletedAt" IS NULL`,
+    {
+      replacements: { name: ENTITY_TYPE_NAME },
+      type: QueryTypes.SELECT,
+    }
+  );
+  
+  entityTypeCache = config || null;
+  entityTypeCacheTimestamp = now;
+  
+  return entityTypeCache;
+}
+
+/**
+ * Check if entity-specific table should be used
+ * @returns {Promise<boolean>}
+ */
+async function shouldUseEntitySpecificTable() {
+  const config = await getEntityTypeConfig();
+  return config?.useEntitySpecificTable === true;
+}
 
 /**
  * Get attribute definitions for Role entity type
@@ -50,11 +100,13 @@ async function getAttributeDefinitions() {
 }
 
 /**
- * Clear the attribute definition cache
+ * Clear all caches
  */
 function clearCache() {
   attributeDefinitionCache = null;
   cacheTimestamp = null;
+  entityTypeCache = null;
+  entityTypeCacheTimestamp = null;
 }
 
 /**
@@ -63,23 +115,44 @@ function clearCache() {
  * @returns {Promise<Object>} Object containing success status and permission data
  */
 async function getRolePermissions(roleId) {
+  const useSpecificTable = await shouldUseEntitySpecificTable();
+
   try {
-    const permissions = await sequelize.query(
-      `SELECT ad.name, ad."valueType", ad."defaultValue",
-              av."valueString", av."valueInteger", av."valueDecimal", 
-              av."valueBoolean", av."valueDate", av."valueDatetime", 
-              av."valueText", av."valueJson"
-       FROM attribute_definitions ad
-       JOIN entity_types et ON ad."entityTypeId" = et.id
-       LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
-         AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
-       WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
-       ORDER BY ad."sortOrder"`,
-      {
-        type: QueryTypes.SELECT,
-        replacements: { roleId }
-      }
-    );
+    let query;
+    const replacements = { roleId };
+
+    if (useSpecificTable) {
+      // Use entity-specific role_attribute_values table
+      query = `
+        SELECT ad.name, ad."valueType", ad."defaultValue",
+               rav."valueString", rav."valueInteger", rav."valueDecimal", 
+               rav."valueBoolean", rav."valueDate", rav."valueDatetime", 
+               rav."valueText", rav."valueJson"
+        FROM attribute_definitions ad
+        JOIN entity_types et ON ad."entityTypeId" = et.id
+        LEFT JOIN role_attribute_values rav ON ad.id = rav."attributeId" 
+          AND rav."roleId" = :roleId
+        WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
+        ORDER BY ad."sortOrder"`;
+    } else {
+      // Use generic attribute_values table (legacy)
+      query = `
+        SELECT ad.name, ad."valueType", ad."defaultValue",
+               av."valueString", av."valueInteger", av."valueDecimal", 
+               av."valueBoolean", av."valueDate", av."valueDatetime", 
+               av."valueText", av."valueJson"
+        FROM attribute_definitions ad
+        JOIN entity_types et ON ad."entityTypeId" = et.id
+        LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
+          AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
+        WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
+        ORDER BY ad."sortOrder"`;
+    }
+
+    const permissions = await sequelize.query(query, {
+      type: QueryTypes.SELECT,
+      replacements
+    });
     
     const result = {};
     
@@ -108,23 +181,42 @@ async function getRolePermissions(roleId) {
  * @returns {Promise<Object>} Object containing success status and permission value
  */
 async function getRolePermission(roleId, permissionName) {
+  const useSpecificTable = await shouldUseEntitySpecificTable();
+
   try {
-    const result = await sequelize.query(
-      `SELECT ad.name, ad."valueType", ad."defaultValue",
-              av."valueString", av."valueInteger", av."valueDecimal", 
-              av."valueBoolean", av."valueDate", av."valueDatetime", 
-              av."valueText", av."valueJson"
-       FROM attribute_definitions ad
-       JOIN entity_types et ON ad."entityTypeId" = et.id
-       LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
-         AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
-       WHERE et.name = 'Role' AND ad.name = :permissionName 
-         AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`,
-      {
-        type: QueryTypes.SELECT,
-        replacements: { roleId, permissionName }
-      }
-    );
+    let query;
+    const replacements = { roleId, permissionName };
+
+    if (useSpecificTable) {
+      query = `
+        SELECT ad.name, ad."valueType", ad."defaultValue",
+               rav."valueString", rav."valueInteger", rav."valueDecimal", 
+               rav."valueBoolean", rav."valueDate", rav."valueDatetime", 
+               rav."valueText", rav."valueJson"
+        FROM attribute_definitions ad
+        JOIN entity_types et ON ad."entityTypeId" = et.id
+        LEFT JOIN role_attribute_values rav ON ad.id = rav."attributeId" 
+          AND rav."roleId" = :roleId
+        WHERE et.name = 'Role' AND ad.name = :permissionName 
+          AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
+    } else {
+      query = `
+        SELECT ad.name, ad."valueType", ad."defaultValue",
+               av."valueString", av."valueInteger", av."valueDecimal", 
+               av."valueBoolean", av."valueDate", av."valueDatetime", 
+               av."valueText", av."valueJson"
+        FROM attribute_definitions ad
+        JOIN entity_types et ON ad."entityTypeId" = et.id
+        LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
+          AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
+        WHERE et.name = 'Role' AND ad.name = :permissionName 
+          AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
+    }
+
+    const result = await sequelize.query(query, {
+      type: QueryTypes.SELECT,
+      replacements
+    });
     
     if (result.length === 0) {
       return { success: false, error: `Permission '${permissionName}' not found` };
@@ -146,7 +238,6 @@ async function getRolePermission(roleId, permissionName) {
 /**
  * Set a permission value for a role using upsert pattern
  * Uses PostgreSQL ON CONFLICT for atomic upsert to prevent race conditions
- * and work with the unique constraint on (entityType, entityId, attributeId)
  * 
  * @param {string} roleId - The role ID
  * @param {string} permissionName - The permission attribute name
@@ -155,6 +246,7 @@ async function getRolePermission(roleId, permissionName) {
  */
 async function setRolePermission(roleId, permissionName, value) {
   const transaction = await sequelize.transaction();
+  const useSpecificTable = await shouldUseEntitySpecificTable();
   
   try {
     // Get attribute definition
@@ -180,46 +272,85 @@ async function setRolePermission(roleId, permissionName, value) {
     
     // Prepare value columns for upsert
     const valueColumns = prepareValueColumnsForRole(value, valueType);
-    
-    // Use upsert with ON CONFLICT for atomic operation
-    const [upsertResult] = await sequelize.query(
-      `INSERT INTO attribute_values 
-       (id, "attributeId", "entityType", "entityId", "valueType",
-        "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-        "valueDate", "valueDatetime", "valueText", "valueJson",
-        "sortOrder", "createdAt", "updatedAt", "deletedAt")
-       VALUES (gen_random_uuid(), :attributeId, 'Role', :roleId, :valueType,
-               :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-               :valueDate, :valueDatetime, :valueText, :valueJson,
-               0, NOW(), NOW(), NULL)
-       ON CONFLICT ("entityType", "entityId", "attributeId") 
-       WHERE "deletedAt" IS NULL
-       DO UPDATE SET
-         "valueString" = EXCLUDED."valueString",
-         "valueInteger" = EXCLUDED."valueInteger",
-         "valueDecimal" = EXCLUDED."valueDecimal",
-         "valueBoolean" = EXCLUDED."valueBoolean",
-         "valueDate" = EXCLUDED."valueDate",
-         "valueDatetime" = EXCLUDED."valueDatetime",
-         "valueText" = EXCLUDED."valueText",
-         "valueJson" = EXCLUDED."valueJson",
-         "updatedAt" = NOW()
-       RETURNING id, (xmax = 0) AS inserted`,
-      {
-        replacements: {
-          attributeId,
-          roleId,
-          valueType,
-          ...valueColumns,
-        },
-        type: QueryTypes.SELECT,
-        transaction
-      }
-    );
+    let wasInserted;
+
+    if (useSpecificTable) {
+      // Use entity-specific role_attribute_values table
+      const [upsertResult] = await sequelize.query(
+        `INSERT INTO role_attribute_values 
+         ("roleId", "attributeId", "valueType",
+          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
+          "valueDate", "valueDatetime", "valueText", "valueJson",
+          "sortOrder", "createdAt", "updatedAt")
+         VALUES (:roleId, :attributeId, :valueType,
+                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
+                 :valueDate, :valueDatetime, :valueText, :valueJson,
+                 0, NOW(), NOW())
+         ON CONFLICT ("roleId", "attributeId") 
+         DO UPDATE SET
+           "valueString" = EXCLUDED."valueString",
+           "valueInteger" = EXCLUDED."valueInteger",
+           "valueDecimal" = EXCLUDED."valueDecimal",
+           "valueBoolean" = EXCLUDED."valueBoolean",
+           "valueDate" = EXCLUDED."valueDate",
+           "valueDatetime" = EXCLUDED."valueDatetime",
+           "valueText" = EXCLUDED."valueText",
+           "valueJson" = EXCLUDED."valueJson",
+           "updatedAt" = NOW()
+         RETURNING (xmax = 0) AS inserted`,
+        {
+          replacements: {
+            attributeId,
+            roleId,
+            valueType,
+            ...valueColumns,
+          },
+          type: QueryTypes.SELECT,
+          transaction
+        }
+      );
+      wasInserted = upsertResult?.inserted === true;
+    } else {
+      // Use generic attribute_values table (legacy)
+      const [upsertResult] = await sequelize.query(
+        `INSERT INTO attribute_values 
+         (id, "attributeId", "entityType", "entityId", "valueType",
+          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
+          "valueDate", "valueDatetime", "valueText", "valueJson",
+          "sortOrder", "createdAt", "updatedAt", "deletedAt")
+         VALUES (gen_random_uuid(), :attributeId, 'Role', :roleId, :valueType,
+                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
+                 :valueDate, :valueDatetime, :valueText, :valueJson,
+                 0, NOW(), NOW(), NULL)
+         ON CONFLICT ("entityType", "entityId", "attributeId") 
+         WHERE "deletedAt" IS NULL
+         DO UPDATE SET
+           "valueString" = EXCLUDED."valueString",
+           "valueInteger" = EXCLUDED."valueInteger",
+           "valueDecimal" = EXCLUDED."valueDecimal",
+           "valueBoolean" = EXCLUDED."valueBoolean",
+           "valueDate" = EXCLUDED."valueDate",
+           "valueDatetime" = EXCLUDED."valueDatetime",
+           "valueText" = EXCLUDED."valueText",
+           "valueJson" = EXCLUDED."valueJson",
+           "updatedAt" = NOW()
+         RETURNING id, (xmax = 0) AS inserted`,
+        {
+          replacements: {
+            attributeId,
+            roleId,
+            valueType,
+            ...valueColumns,
+          },
+          type: QueryTypes.SELECT,
+          transaction
+        }
+      );
+      wasInserted = upsertResult?.inserted === true;
+    }
     
     await transaction.commit();
     
-    const wasInserted = upsertResult?.inserted === true;
     return { 
       success: true, 
       data: { 
@@ -493,6 +624,74 @@ async function getAvailablePermissions() {
   }
 }
 
+/**
+ * Delete a permission value for a role
+ * @param {string} roleId - The role ID
+ * @param {string} permissionName - The permission to delete
+ * @returns {Promise<Object>} Object containing success status
+ */
+async function deleteRolePermission(roleId, permissionName) {
+  const useSpecificTable = await shouldUseEntitySpecificTable();
+
+  try {
+    if (useSpecificTable) {
+      // Delete from entity-specific table
+      const result = await sequelize.query(
+        `DELETE FROM role_attribute_values rav
+         USING attribute_definitions ad, entity_types et
+         WHERE rav."attributeId" = ad.id
+           AND ad."entityTypeId" = et.id
+           AND rav."roleId" = :roleId
+           AND ad.name = :permissionName
+           AND et.name = 'Role'
+         RETURNING rav."roleId"`,
+        {
+          replacements: { roleId, permissionName },
+          type: QueryTypes.SELECT,
+        }
+      );
+      return { success: true, deleted: result.length > 0 };
+    } else {
+      // Soft delete from generic attribute_values table (legacy)
+      const result = await sequelize.query(
+        `UPDATE attribute_values av
+         SET "deletedAt" = NOW()
+         FROM attribute_definitions ad
+         JOIN entity_types et ON ad."entityTypeId" = et.id
+         WHERE av."attributeId" = ad.id
+           AND av."entityId" = :roleId
+           AND av."entityType" = 'Role'
+           AND ad.name = :permissionName
+           AND et.name = 'Role'
+           AND av."deletedAt" IS NULL
+         RETURNING av.id`,
+        {
+          replacements: { roleId, permissionName },
+          type: QueryTypes.SELECT,
+        }
+      );
+      return { success: true, deleted: result.length > 0 };
+    }
+  } catch (error) {
+    console.error('Error deleting role permission:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get information about which table is being used
+ * Useful for debugging and monitoring
+ * @returns {Promise<object>} Configuration info
+ */
+async function getEavTableInfo() {
+  const config = await getEntityTypeConfig();
+  return {
+    entityType: ENTITY_TYPE_NAME,
+    useEntitySpecificTable: config?.useEntitySpecificTable || false,
+    tableName: config?.useEntitySpecificTable ? 'role_attribute_values' : 'attribute_values',
+  };
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -598,6 +797,7 @@ module.exports = {
   bulkSetRolePermissions,
   hasPermission,
   anyRoleHasPermission,
+  deleteRolePermission,
   
   // User permission operations (aggregated across roles)
   getUserPermissions,
@@ -610,6 +810,13 @@ module.exports = {
   getAvailablePermissions,
   getAttributeDefinitions,
   
+  // New utility functions
+  getEavTableInfo,
+  shouldUseEntitySpecificTable,
+  
   // Cache management
   clearCache,
+  
+  // Constants
+  ENTITY_TYPE_NAME,
 };

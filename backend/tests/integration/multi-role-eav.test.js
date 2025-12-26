@@ -16,6 +16,8 @@ const {
   EntityType,
   AttributeDefinition,
   AttributeValue,
+  UserAttributeValue,
+  RoleAttributeValue,
 } = require('../../models');
 const RoleEavService = require('../../utils/roleEavService');
 
@@ -31,15 +33,18 @@ describe('Multi-Role and EAV Permissions', function () {
   async function cleanupTestData() {
     if (testUserId) {
       await UserRole.destroy({ where: { userId: testUserId }, force: true });
+      await UserAttributeValue.destroy({ where: { userId: testUserId }, force: true });
       await User.destroy({ where: { id: testUserId }, force: true });
     }
     if (testRoleId1) {
       await AttributeValue.destroy({ where: { entityId: testRoleId1 }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: testRoleId1 }, force: true });
       await UserRole.destroy({ where: { roleId: testRoleId1 }, force: true });
       await Role.destroy({ where: { id: testRoleId1 }, force: true });
     }
     if (testRoleId2) {
       await AttributeValue.destroy({ where: { entityId: testRoleId2 }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: testRoleId2 }, force: true });
       await UserRole.destroy({ where: { roleId: testRoleId2 }, force: true });
       await Role.destroy({ where: { id: testRoleId2 }, force: true });
     }
@@ -218,8 +223,9 @@ describe('Multi-Role and EAV Permissions', function () {
       expect(getResult.success).to.be.true;
       expect(getResult.data.value).to.be.true;
 
-      // Cleanup
+      // Cleanup (both generic and entity-specific tables)
       await AttributeValue.destroy({ where: { entityId: testPermRoleId }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: testPermRoleId }, force: true });
       await Role.destroy({ where: { id: testPermRoleId }, force: true });
     });
 
@@ -367,9 +373,11 @@ describe('Multi-Role and EAV Permissions', function () {
       // OR logic: true OR false = true
       expect(aggregated.data.can_create_users).to.be.true;
 
-      // Cleanup
+      // Cleanup (both generic and entity-specific tables)
       await AttributeValue.destroy({ where: { entityId: role1Id }, force: true });
       await AttributeValue.destroy({ where: { entityId: role2Id }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: role1Id }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: role2Id }, force: true });
       await Role.destroy({ where: { id: role1Id }, force: true });
       await Role.destroy({ where: { id: role2Id }, force: true });
     });
@@ -390,11 +398,136 @@ describe('Multi-Role and EAV Permissions', function () {
       // MAX logic: max(3, 7) = 7
       expect(aggregated.data.max_course_load).to.equal(7);
 
-      // Cleanup
+      // Cleanup (both generic and entity-specific tables)
       await AttributeValue.destroy({ where: { entityId: role1Id }, force: true });
       await AttributeValue.destroy({ where: { entityId: role2Id }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: role1Id }, force: true });
+      await RoleAttributeValue.destroy({ where: { roleId: role2Id }, force: true });
       await Role.destroy({ where: { id: role1Id }, force: true });
       await Role.destroy({ where: { id: role2Id }, force: true });
+    });
+  });
+
+  // ============================================================================
+  // Entity-Specific Table Tests
+  // ============================================================================
+  describe('Entity-Specific Attribute Value Tables', function () {
+    
+    it('should have user_attribute_values table structure', async function () {
+      const [columns] = await sequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'user_attribute_values'
+      `);
+
+      // Skip if table doesn't exist yet (migration not run)
+      if (columns.length === 0) {
+        this.skip();
+      }
+
+      const columnNames = columns.map(c => c.column_name);
+      expect(columnNames).to.include('userId');
+      expect(columnNames).to.include('attributeId');
+      expect(columnNames).to.include('valueType');
+      expect(columnNames).to.include('valueString');
+      expect(columnNames).to.include('valueBoolean');
+    });
+
+    it('should have role_attribute_values table structure', async function () {
+      const [columns] = await sequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'role_attribute_values'
+      `);
+
+      // Skip if table doesn't exist yet (migration not run)
+      if (columns.length === 0) {
+        this.skip();
+      }
+
+      const columnNames = columns.map(c => c.column_name);
+      expect(columnNames).to.include('roleId');
+      expect(columnNames).to.include('attributeId');
+      expect(columnNames).to.include('valueType');
+      expect(columnNames).to.include('valueString');
+      expect(columnNames).to.include('valueBoolean');
+    });
+
+    it('should have useEntitySpecificTable column in entity_types', async function () {
+      const [columns] = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'entity_types' AND column_name = 'useEntitySpecificTable'
+      `);
+
+      // Skip if column doesn't exist yet (migration not run)
+      if (columns.length === 0) {
+        this.skip();
+      }
+
+      expect(columns).to.have.lengthOf(1);
+    });
+
+    it('should report correct table info from RoleEavService', async function () {
+      const tableInfo = await RoleEavService.getEavTableInfo();
+      
+      expect(tableInfo).to.exist;
+      expect(tableInfo.entityType).to.equal('Role');
+      expect(tableInfo).to.have.property('useEntitySpecificTable');
+      expect(tableInfo).to.have.property('tableName');
+      
+      // Table name should match the feature flag state
+      if (tableInfo.useEntitySpecificTable) {
+        expect(tableInfo.tableName).to.equal('role_attribute_values');
+      } else {
+        expect(tableInfo.tableName).to.equal('attribute_values');
+      }
+    });
+
+    it('should have proper foreign key constraints on user_attribute_values', async function () {
+      const [constraints] = await sequelize.query(`
+        SELECT tc.constraint_name, tc.constraint_type, kcu.column_name, 
+               ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+          ON tc.constraint_name = kcu.constraint_name
+        LEFT JOIN information_schema.constraint_column_usage AS ccu
+          ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.table_name = 'user_attribute_values'
+          AND tc.constraint_type = 'FOREIGN KEY'
+      `);
+
+      // Skip if table doesn't exist yet
+      if (constraints.length === 0) {
+        this.skip();
+      }
+
+      const foreignTables = constraints.map(c => c.foreign_table_name);
+      expect(foreignTables).to.include('users');
+      expect(foreignTables).to.include('attribute_definitions');
+    });
+
+    it('should have proper foreign key constraints on role_attribute_values', async function () {
+      const [constraints] = await sequelize.query(`
+        SELECT tc.constraint_name, tc.constraint_type, kcu.column_name, 
+               ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+          ON tc.constraint_name = kcu.constraint_name
+        LEFT JOIN information_schema.constraint_column_usage AS ccu
+          ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.table_name = 'role_attribute_values'
+          AND tc.constraint_type = 'FOREIGN KEY'
+      `);
+
+      // Skip if table doesn't exist yet
+      if (constraints.length === 0) {
+        this.skip();
+      }
+
+      const foreignTables = constraints.map(c => c.foreign_table_name);
+      expect(foreignTables).to.include('roles');
+      expect(foreignTables).to.include('attribute_definitions');
     });
   });
 });
