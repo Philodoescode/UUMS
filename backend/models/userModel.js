@@ -51,6 +51,18 @@ const User = sequelize.define('User', {
       key: 'id',
     },
   },
+  /**
+   * EAV Migration Flag
+   * When true, extended profile data (student info, instructor info, parent info, staff info)
+   * is stored in the attribute_values table using the EAV pattern.
+   * This enables dynamic, extensible profile attributes without schema changes.
+   */
+  profileEavEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Flag indicating extended profile data stored in EAV tables',
+  },
 }, {
   tableName: 'users',
   timestamps: true,

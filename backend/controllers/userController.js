@@ -1,5 +1,6 @@
 const { User, Role } = require('../models');
 const bcrypt = require('bcryptjs');
+const UserProfileEavService = require('../utils/userProfileEavService');
 
 // @desc    Create a new user (Admin only)
 // @route   POST /api/users
@@ -187,7 +188,7 @@ const getUserById = async (req, res) => {
             include: [
                 { model: Role, as: 'role', attributes: ['name'] }
             ],
-            attributes: ['id', 'fullName', 'email']
+            attributes: ['id', 'fullName', 'email', 'profileEavEnabled']
         });
 
         if (!user) {
@@ -201,10 +202,274 @@ const getUserById = async (req, res) => {
     }
 };
 
+// ============================================================================
+// Profile EAV Endpoints
+// ============================================================================
+
+// @desc    Get user's extended profile attributes
+// @route   GET /api/users/:id/profile
+const getUserProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { category } = req.query; // Optional: filter by category
+
+        // Verify user exists
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        let result;
+        if (category) {
+            result = await UserProfileEavService.getUserProfileByCategory(id, category);
+        } else {
+            result = await UserProfileEavService.getUserProfile(id);
+        }
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        res.json({
+            userId: id,
+            profileEavEnabled: user.profileEavEnabled,
+            category: category || 'all',
+            attributes: result.data,
+        });
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Update user's extended profile attributes (bulk update)
+// @route   PUT /api/users/:id/profile
+const updateUserProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const attributes = req.body;
+
+        // Verify user exists
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Validate request body
+        if (!attributes || typeof attributes !== 'object' || Object.keys(attributes).length === 0) {
+            return res.status(400).json({ message: 'Please provide attributes to update' });
+        }
+
+        const result = await UserProfileEavService.bulkSetUserProfile(id, attributes);
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        // Enable EAV flag if not already enabled
+        if (!user.profileEavEnabled) {
+            await UserProfileEavService.enableProfileEav(id);
+        }
+
+        res.json({
+            message: 'Profile updated successfully',
+            userId: id,
+            processedCount: result.processedCount,
+            results: result.results,
+        });
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Set a single profile attribute
+// @route   PUT /api/users/:id/profile/:attributeName
+const setProfileAttribute = async (req, res) => {
+    try {
+        const { id, attributeName } = req.params;
+        const { value } = req.body;
+
+        // Verify user exists
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (value === undefined) {
+            return res.status(400).json({ message: 'Please provide a value' });
+        }
+
+        const result = await UserProfileEavService.setUserProfileAttribute(id, attributeName, value);
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        // Enable EAV flag if not already enabled
+        if (!user.profileEavEnabled) {
+            await UserProfileEavService.enableProfileEav(id);
+        }
+
+        res.json({
+            message: 'Attribute set successfully',
+            userId: id,
+            attributeName,
+            value: result.data.value,
+        });
+    } catch (error) {
+        console.error('Error setting profile attribute:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Delete a profile attribute
+// @route   DELETE /api/users/:id/profile/:attributeName
+const deleteProfileAttribute = async (req, res) => {
+    try {
+        const { id, attributeName } = req.params;
+
+        // Verify user exists
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const result = await UserProfileEavService.deleteUserProfileAttribute(id, attributeName);
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        res.json({
+            message: 'Attribute deleted successfully',
+            userId: id,
+            attributeName,
+        });
+    } catch (error) {
+        console.error('Error deleting profile attribute:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get available profile attribute definitions
+// @route   GET /api/users/profile/attributes
+const getAvailableProfileAttributes = async (req, res) => {
+    try {
+        const { category } = req.query; // Optional category filter
+
+        const result = await UserProfileEavService.getAvailableProfileAttributes(category);
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        res.json({
+            category: category || 'all',
+            attributes: result.data,
+            count: result.data.length,
+        });
+    } catch (error) {
+        console.error('Error getting profile attributes:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Enable/disable profile EAV for a user
+// @route   PUT /api/users/:id/profile/eav-status
+const setProfileEavStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { enabled } = req.body;
+
+        // Verify user exists
+        const user = await User.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ message: 'Please provide enabled (boolean)' });
+        }
+
+        let result;
+        if (enabled) {
+            result = await UserProfileEavService.enableProfileEav(id);
+        } else {
+            result = await UserProfileEavService.disableProfileEav(id);
+        }
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        res.json({
+            message: `Profile EAV ${enabled ? 'enabled' : 'disabled'} successfully`,
+            userId: id,
+            profileEavEnabled: enabled,
+        });
+    } catch (error) {
+        console.error('Error setting profile EAV status:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Initialize profile for user based on role
+// @route   POST /api/users/:id/profile/initialize
+const initializeUserProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body; // e.g., 'student', 'instructor', 'parent', 'staff'
+
+        // Verify user exists
+        const user = await User.findByPk(id, {
+            include: [{ model: Role, as: 'role', attributes: ['name'] }]
+        });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Use provided role or infer from user's actual role
+        const profileRole = role || (user.role ? user.role.name : null);
+        
+        if (!profileRole) {
+            return res.status(400).json({ message: 'Please provide a role to initialize profile for' });
+        }
+
+        const result = await UserProfileEavService.initializeProfileForRole(id, profileRole);
+
+        if (!result.success) {
+            return res.status(400).json({ message: result.error });
+        }
+
+        // Enable EAV flag
+        await UserProfileEavService.enableProfileEav(id);
+
+        res.json({
+            message: `Profile initialized for ${profileRole} role`,
+            userId: id,
+            role: profileRole,
+            attributes: result.data,
+        });
+    } catch (error) {
+        console.error('Error initializing user profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getAllUsers,
     assignAdvisor,
     createUser,
     getFacultyMembers,
-    getUserById
+    getUserById,
+    // Profile EAV endpoints
+    getUserProfile,
+    updateUserProfile,
+    setProfileAttribute,
+    deleteProfileAttribute,
+    getAvailableProfileAttributes,
+    setProfileEavStatus,
+    initializeUserProfile,
 };
