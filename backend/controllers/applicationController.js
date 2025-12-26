@@ -1,4 +1,4 @@
-const { AdmissionApplication, User, Role } = require('../models');
+const { AdmissionApplication, User, Role, UserRole } = require('../models');
 const bcrypt = require('bcryptjs');
 
 // @desc    Submit a new admission application
@@ -115,12 +115,18 @@ const updateApplicationStatus = async (req, res) => {
                 const salt = await bcrypt.genSalt(10);
                 const hashedPassword = await bcrypt.hash('password123', salt);
 
-                await User.create({
+                // Create user without roleId (multi-role pattern)
+                const newUser = await User.create({
                     fullName: application.name,
                     email: application.email,
                     password: hashedPassword,
-                    roleId: studentRole.id,
                     isActive: true
+                });
+
+                // Assign student role through UserRole join table
+                await UserRole.create({
+                    userId: newUser.id,
+                    roleId: studentRole.id
                 });
             }
         }

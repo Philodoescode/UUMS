@@ -1,6 +1,7 @@
-const { User, Role } = require('../models');
+const { User, Role, UserRole } = require('../models');
 const bcrypt = require('bcryptjs');
 const UserProfileEavService = require('../utils/userProfileEavService');
+const { Op } = require('sequelize');
 
 // @desc    Create a new user (Admin only)
 // @route   POST /api/users
@@ -46,16 +47,21 @@ const createUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
-        // Create user
+        // Create user (without roleId - using multi-role pattern)
         const user = await User.create({
             fullName,
             email,
             password: hashedPassword,
-            roleId: roleDoc.id,
             createdById: req.user.id
         });
 
         if (user) {
+            // Assign role through UserRole join table (multi-role pattern)
+            await UserRole.create({
+                userId: user.id,
+                roleId: roleDoc.id
+            });
+
             res.status(201).json({
                 _id: user.id,
                 fullName: user.fullName,
@@ -77,27 +83,47 @@ const createUser = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const { role } = req.query;
-        let where = {};
+        let includeOptions = [
+            { model: Role, as: 'roles', through: { attributes: [] }, attributes: ['id', 'name'] },
+            { model: User, as: 'advisor', attributes: ['id', 'fullName'] }
+        ];
 
+        let users;
         if (role) {
             const roleDoc = await Role.findOne({ where: { name: role } });
-            if (roleDoc) {
-                where.roleId = roleDoc.id;
-            } else {
+            if (!roleDoc) {
                 return res.json([]); // Role not found, return empty
             }
+            // Filter users who have this role through UserRole join table
+            users = await User.findAll({
+                include: [
+                    { 
+                        model: Role, 
+                        as: 'roles', 
+                        through: { attributes: [] }, 
+                        attributes: ['id', 'name'],
+                        where: { id: roleDoc.id }
+                    },
+                    { model: User, as: 'advisor', attributes: ['id', 'fullName'] }
+                ],
+                attributes: ['id', 'fullName', 'email']
+            });
+        } else {
+            users = await User.findAll({
+                include: includeOptions,
+                attributes: ['id', 'fullName', 'email']
+            });
         }
 
-        const users = await User.findAll({
-            where,
-            include: [
-                { model: Role, as: 'role', attributes: ['name'] },
-                { model: User, as: 'advisor', attributes: ['id', 'fullName'] }
-            ],
-            attributes: ['id', 'fullName', 'email']
+        // Transform response to include role for backward compatibility
+        const transformedUsers = users.map(user => {
+            const userData = user.toJSON();
+            // Set primary role as first role for backward compatibility
+            userData.role = userData.roles && userData.roles.length > 0 ? userData.roles[0] : null;
+            return userData;
         });
 
-        res.json(users);
+        res.json(transformedUsers);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -151,14 +177,16 @@ const getFacultyMembers = async (req, res) => {
         if (instructorRole) roleIds.push(instructorRole.id);
         if (taRole) roleIds.push(taRole.id);
 
-        const { Op } = require('sequelize');
-
+        // Use UserRole join table to find users with instructor or TA roles
         const faculty = await User.findAll({
-            where: {
-                roleId: { [Op.in]: roleIds }
-            },
             include: [
-                { model: Role, as: 'role', attributes: ['name'] },
+                { 
+                    model: Role, 
+                    as: 'roles', 
+                    through: { attributes: [] },
+                    attributes: ['id', 'name'],
+                    where: { id: { [Op.in]: roleIds } }
+                },
                 {
                     model: Instructor,
                     as: 'instructorProfile',
@@ -171,7 +199,14 @@ const getFacultyMembers = async (req, res) => {
             attributes: ['id', 'fullName', 'email']
         });
 
-        res.json(faculty);
+        // Transform to include 'role' for backward compatibility
+        const transformedFaculty = faculty.map(user => {
+            const userData = user.toJSON();
+            userData.role = userData.roles && userData.roles.length > 0 ? userData.roles[0] : null;
+            return userData;
+        });
+
+        res.json(transformedFaculty);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -186,7 +221,7 @@ const getUserById = async (req, res) => {
 
         const user = await User.findByPk(id, {
             include: [
-                { model: Role, as: 'role', attributes: ['name'] }
+                { model: Role, as: 'roles', through: { attributes: [] }, attributes: ['id', 'name'] }
             ],
             attributes: ['id', 'fullName', 'email', 'profileEavEnabled']
         });
@@ -195,7 +230,11 @@ const getUserById = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(user);
+        // Transform to include 'role' for backward compatibility
+        const userData = user.toJSON();
+        userData.role = userData.roles && userData.roles.length > 0 ? userData.roles[0] : null;
+
+        res.json(userData);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

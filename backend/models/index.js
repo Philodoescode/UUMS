@@ -60,10 +60,11 @@ User.belongsToMany(User, {
 
 
 // ===== User & Role Associations =====
-User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
-Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+// Multi-role architecture: Users can have multiple roles through UserRole join table
+// NOTE: The direct User.belongsTo(Role) and Role.hasMany(User) via roleId have been removed
+// All role assignments now go through the many-to-many relationship
 
-// Many-to-many relationship for multiple roles
+// Many-to-many relationship for multiple roles (PRIMARY relationship)
 User.belongsToMany(Role, {
   through: UserRole,
   foreignKey: 'userId',
@@ -74,8 +75,14 @@ Role.belongsToMany(User, {
   through: UserRole,
   foreignKey: 'roleId',
   otherKey: 'userId',
-  as: 'usersWithRole'
+  as: 'users'
 });
+
+// Direct access to UserRole for querying
+User.hasMany(UserRole, { foreignKey: 'userId', as: 'userRoles' });
+UserRole.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Role.hasMany(UserRole, { foreignKey: 'roleId', as: 'roleUsers' });
+UserRole.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
 
 User.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(User, { foreignKey: 'createdById', as: 'createdUsers' });

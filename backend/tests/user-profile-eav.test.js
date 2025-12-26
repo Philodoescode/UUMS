@@ -76,6 +76,11 @@ async function cleanupTestUser(userId) {
        WHERE "entityId" = :userId AND "entityType" = 'User'`,
       { replacements: { userId } }
     );
+    // Clean up user_roles (multi-role join table)
+    await sequelize.query(
+      `DELETE FROM user_roles WHERE "userId" = :userId`,
+      { replacements: { userId } }
+    );
     await sequelize.query(
       `DELETE FROM users WHERE id = :userId`,
       { replacements: { userId } }
@@ -85,23 +90,31 @@ async function cleanupTestUser(userId) {
   }
 }
 
-// Create test user helper
+// Create test user helper (multi-role pattern - uses user_roles join table)
 async function createTestUser() {
   if (!defaultRoleId) {
     throw new Error('defaultRoleId not set. Run initialization first.');
   }
   const userId = uuidv4();
+  // Create user without roleId column (multi-role architecture)
   await sequelize.query(
-    `INSERT INTO users (id, "fullName", email, password, "isActive", "roleId", "createdAt", "updatedAt")
-     VALUES (:id, :fullName, :email, :password, true, :roleId, NOW(), NOW())`,
+    `INSERT INTO users (id, "fullName", email, password, "isActive", "createdAt", "updatedAt")
+     VALUES (:id, :fullName, :email, :password, true, NOW(), NOW())`,
     {
       replacements: {
         id: userId,
         fullName: `Test User ${userId.slice(0, 8)}`,
         email: `test-${userId.slice(0, 8)}@example.com`,
         password: '$2b$10$test.hashed.password.here',
-        roleId: defaultRoleId,
       },
+    }
+  );
+  // Assign role via user_roles join table
+  await sequelize.query(
+    `INSERT INTO user_roles (id, "userId", "roleId", "createdAt", "updatedAt")
+     VALUES (gen_random_uuid(), :userId, :roleId, NOW(), NOW())`,
+    {
+      replacements: { userId, roleId: defaultRoleId },
     }
   );
   return userId;

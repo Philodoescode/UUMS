@@ -146,18 +146,28 @@ async function createTestUser() {
   const userId = uuidv4();
   const roleId = await getOrCreateTestRole();
   
+  // Create user without roleId (multi-role pattern)
   await sequelize.query(
-    `INSERT INTO users (id, "fullName", email, password, "isActive", "roleId", "createdAt", "updatedAt")
-     VALUES (:id, :name, :email, 'test_hash', true, :roleId, NOW(), NOW())`,
+    `INSERT INTO users (id, "fullName", email, password, "isActive", "createdAt", "updatedAt")
+     VALUES (:id, :name, :email, 'test_hash', true, NOW(), NOW())`,
     {
       replacements: {
         id: userId,
         name: `Test User ${userId.slice(0, 8)}`,
         email: `test-${userId.slice(0, 8)}@example.com`,
-        roleId: roleId,
       },
     }
   );
+  
+  // Assign role via user_roles join table
+  await sequelize.query(
+    `INSERT INTO user_roles (id, "userId", "roleId", "createdAt", "updatedAt")
+     VALUES (gen_random_uuid(), :userId, :roleId, NOW(), NOW())`,
+    {
+      replacements: { userId, roleId },
+    }
+  );
+  
   testData.users.push(userId);
   return userId;
 }

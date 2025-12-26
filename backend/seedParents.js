@@ -1,4 +1,4 @@
-const { sequelize, User, Role, Enrollment, Course } = require('./models');
+const { sequelize, User, Role, Enrollment, Course, UserRole } = require('./models');
 const bcrypt = require('bcryptjs');
 
 const seedParents = async () => {
@@ -13,7 +13,7 @@ const seedParents = async () => {
             console.log('Created parent role');
         }
 
-        // 2. Create Parent User
+        // 2. Create Parent User (without roleId - using multi-role pattern)
         const hashedPassword = await bcrypt.hash('password123', 10);
         const [parentUser, created] = await User.findOrCreate({
             where: { email: 'parent@example.com' },
@@ -21,22 +21,42 @@ const seedParents = async () => {
                 fullName: 'John Parent',
                 email: 'parent@example.com',
                 password: hashedPassword,
-                roleId: parentRole.id
             }
         });
 
-        if (created) console.log('Created parent user: parent@example.com');
-        else console.log('Parent user already exists');
+        if (created) {
+            console.log('Created parent user: parent@example.com');
+            // Assign parent role through UserRole join table
+            await UserRole.create({
+                userId: parentUser.id,
+                roleId: parentRole.id
+            });
+            console.log('  - Assigned parent role via UserRole');
+        } else {
+            console.log('Parent user already exists');
+            // Ensure role is assigned
+            await UserRole.findOrCreate({
+                where: { userId: parentUser.id, roleId: parentRole.id },
+                defaults: { userId: parentUser.id, roleId: parentRole.id }
+            });
+        }
 
         // 3. Find a Student to Link
-        // Look for a user with student role
+        // Look for a user with student role through UserRole table
         const studentRole = await Role.findOne({ where: { name: 'student' } });
         if (!studentRole) {
             console.log('Student role not found, skipping linking');
             return;
         }
 
-        const students = await User.findAll({ where: { roleId: studentRole.id } });
+        // Find users with student role via UserRole join table
+        const studentUserRoles = await UserRole.findAll({ 
+            where: { roleId: studentRole.id },
+            include: [{ model: User, as: 'user' }]
+        });
+        
+        const students = studentUserRoles.map(ur => ur.user).filter(Boolean);
+        
         if (students.length === 0) {
             console.log('No students found to link.');
             // Create one?

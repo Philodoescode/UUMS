@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { sequelize, User, Role, Department, Instructor } = require('./models');
+const { sequelize, User, Role, Department, Instructor, UserRole } = require('./models');
 
 const seedSecondInstructor = async () => {
     try {
@@ -20,7 +20,7 @@ const seedSecondInstructor = async () => {
             process.exit(1);
         }
 
-        // 3. Create User
+        // 3. Create User (without roleId - using multi-role pattern)
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('password123', salt);
 
@@ -30,14 +30,24 @@ const seedSecondInstructor = async () => {
                 fullName: 'Alan Turing',
                 email: 'turing@example.com',
                 password: hashedPassword,
-                roleId: instructorRole.id
             }
         });
 
         if (created) {
             console.log(`Created Second Instructor User: ${user.fullName}`);
+            // Assign instructor role through UserRole join table
+            await UserRole.create({
+                userId: user.id,
+                roleId: instructorRole.id
+            });
+            console.log(`  - Assigned instructor role via UserRole`);
         } else {
             console.log(`User already exists: ${user.fullName}`);
+            // Ensure role is assigned
+            await UserRole.findOrCreate({
+                where: { userId: user.id, roleId: instructorRole.id },
+                defaults: { userId: user.id, roleId: instructorRole.id }
+            });
         }
 
         // 4. Create Instructor Profile
