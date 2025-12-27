@@ -61,7 +61,7 @@ const getCourseStudents = async (req, res) => {
                     model: User,
                     as: 'student',
                     attributes: ['id', 'fullName', 'email'],
-                    include: [{ model: Role, as: 'role' }],
+                    include: [{ model: Role, as: 'roles' }],
                 },
                 {
                     model: Course,

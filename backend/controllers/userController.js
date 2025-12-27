@@ -27,7 +27,8 @@ const createUser = async (req, res) => {
             return res.status(400).json({ message: 'Invalid role' });
         }
 
-        if (!['TA', 'Instructor'].includes(role) && req.user.role.name !== 'admin') {
+        const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
+        if (!['TA', 'Instructor'].includes(role) && !isAdmin) {
             // Note: Depending on requirements, admin might want to create other admins too, 
             // but spec says "staff accounts (TA and Instructor)".
             // For now, let's allow creating any role if the role exists in DB, 
@@ -462,7 +463,7 @@ const initializeUserProfile = async (req, res) => {
 
         // Verify user exists
         const user = await User.findByPk(id, {
-            include: [{ model: Role, as: 'role', attributes: ['name'] }]
+            include: [{ model: Role, as: 'roles', attributes: ['name'] }]
         });
         
         if (!user) {
@@ -470,7 +471,7 @@ const initializeUserProfile = async (req, res) => {
         }
 
         // Use provided role or infer from user's actual role
-        const profileRole = role || (user.role ? user.role.name : null);
+        const profileRole = role || (user.roles && user.roles.length > 0 ? user.roles[0].name : null);
         
         if (!profileRole) {
             return res.status(400).json({ message: 'Please provide a role to initialize profile for' });

@@ -14,12 +14,14 @@ const createInstructor = async (req, res) => {
 
     // Check user exists and is an advisor
     const user = await User.findByPk(userId, {
-      include: [{ model: Role, as: 'role' }],
+      include: [{ model: Role, as: 'roles' }],
     });
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
-    if (user.role.name !== 'instructor') {
+    
+    const hasInstructorRole = user.roles && user.roles.some(r => r.name === 'instructor');
+    if (!hasInstructorRole) {
       return res.status(400).json({ message: 'User must have instructor role to be an instructor' });
     }
 

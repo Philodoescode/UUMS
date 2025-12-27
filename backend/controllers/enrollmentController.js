@@ -50,12 +50,14 @@ const createEnrollment = async (req, res) => {
 
     // Check user exists and is a student
     const user = await User.findByPk(userId, {
-      include: [{ model: Role, as: 'role' }],
+      include: [{ model: Role, as: 'roles' }],
     });
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
-    if (user.role.name !== 'student') {
+    
+    const hasStudentRole = user.roles && user.roles.some(r => r.name === 'student');
+    if (!hasStudentRole) {
       return res.status(400).json({ message: 'User must have student role to enroll' });
     }
 

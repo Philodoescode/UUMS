@@ -5,7 +5,8 @@ const { Instructor, User, Department, Role, Course } = require('../models');
 const getMyProfile = async (req, res) => {
     try {
         // Check if user is an instructor or TA
-        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'ta') {
+        const isInstructorOrTa = req.user.roles && req.user.roles.some(r => r.name === 'instructor' || r.name === 'ta');
+        if (!isInstructorOrTa) {
             return res.status(403).json({ message: 'Only instructors can access this endpoint' });
         }
 
@@ -33,7 +34,8 @@ const getMyProfile = async (req, res) => {
 const updateMyProfile = async (req, res) => {
     try {
         // Check if user is an instructor or TA
-        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'ta') {
+        const isInstructorOrTa = req.user.roles && req.user.roles.some(r => r.name === 'instructor' || r.name === 'ta');
+        if (!isInstructorOrTa) {
             return res.status(403).json({ message: 'Only instructors can access this endpoint' });
         }
 
@@ -95,7 +97,7 @@ const getProfileById = async (req, res) => {
                     as: 'user',
                     attributes: ['id', 'fullName', 'email'],
                     include: [
-                        { model: Role, as: 'role', attributes: ['id', 'name'] }
+                        { model: Role, as: 'roles', attributes: ['id', 'name'] }
                     ]
                 },
                 { model: Department, as: 'department' },

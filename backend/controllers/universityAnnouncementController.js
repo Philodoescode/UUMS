@@ -3,7 +3,8 @@ const { UniversityAnnouncement, User, Role } = require('../models');
 // Helper function to check if user has permission to create announcements
 const hasAnnouncementPermission = async (user) => {
   // Admin and HR roles always have permission
-  if (user.role.name === 'admin' || user.role.name === 'hr') {
+  const hasAdminOrHr = user.roles && user.roles.some(r => r.name === 'admin' || r.name === 'hr');
+  if (hasAdminOrHr) {
     return true;
   }
 
@@ -96,7 +97,7 @@ const createUniversityAnnouncement = async (req, res) => {
           model: User,
           as: 'creator',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }]
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }]
         }
       ]
     });
@@ -126,7 +127,7 @@ const getUniversityAnnouncements = async (req, res) => {
           model: User,
           as: 'creator',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }]
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }]
         }
       ],
       order: [['publishedAt', 'DESC']]
