@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MegaphoneIcon, PlusIcon, SendIcon, Loader2Icon } from "lucide-react";
 import api from "@/lib/api";
+import { toast } from "sonner";
 
 interface Announcement {
     id: string;
@@ -60,9 +61,10 @@ export const InstructorAnnouncements = ({ courseId }: InstructorAnnouncementsPro
             setNewContent("");
             setIsCreating(false);
             fetchAnnouncements();
-        } catch (error) {
+            toast.success("Announcement created successfully");
+        } catch (error: any) {
             console.error("Failed to create announcement:", error);
-            // Optionally add toast error here
+            toast.error(error.response?.data?.message || "Failed to create announcement");
         } finally {
             setIsSubmitting(false);
         }

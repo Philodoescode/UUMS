@@ -18,7 +18,6 @@ import CourseDashboard from "@/pages/instructor/CourseDashboard"
 import GradeManagement from "@/pages/instructor/GradeManagement"
 import InstructorMessages from "@/pages/instructor/Messages"
 import MeetingRequestsReview from "@/pages/instructor/MeetingRequestsReview"
-import AdvisorDashboard from "@/pages/advisor/Dashboard"
 import StudentDashboard from "@/pages/student/Dashboard"
 import CourseCatalog from "@/pages/student/CourseCatalog"
 import Academics from "@/pages/student/Academics"
@@ -132,11 +131,6 @@ function App() {
             <Route path="/hr/employees" element={<HREmployees />} />
             <Route path="/hr/benefits" element={<HRBenefitsManagement />} />
             <Route path="/hr/professional-development" element={<ProfessionalDevelopmentPage />} />
-          </Route>
-
-          {/* Advisor Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['advisor']} />}>
-            <Route path="/advisor" element={<AdvisorDashboard />} />
           </Route>
 
           {/* Student Routes */}

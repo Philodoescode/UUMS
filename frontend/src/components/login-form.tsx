@@ -43,13 +43,14 @@ export function LoginForm({
       // Update context
       login(user);
 
-      if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'instructor') navigate('/instructor');
-      else if (user.role === 'ta') navigate('/ta');
-      else if (user.role === 'student') navigate('/student');
-      else if (user.role === 'advisor') navigate('/advisor');
-      else if (user.role === 'hr') navigate('/hr');
-      else if (user.role === 'parent') navigate('/parent');
+      const roles = user.roles || (user.role ? [user.role] : []);
+
+      if (roles.includes('admin')) navigate('/admin');
+      else if (roles.includes('instructor')) navigate('/instructor');
+      else if (roles.includes('ta')) navigate('/ta');
+      else if (roles.includes('student')) navigate('/student');
+      else if (roles.includes('hr')) navigate('/hr');
+      else if (roles.includes('parent')) navigate('/parent');
 
     } catch (err: any) {
       setError(err.response?.data?.message || "An unexpected error occurred.");

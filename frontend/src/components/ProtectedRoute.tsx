@@ -16,7 +16,10 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  const userRoles = user.roles || (user.role ? [user.role] : []);
+  const hasPermission = allowedRoles.some(role => userRoles.includes(role));
+
+  if (!hasPermission) {
     return (
         <div className="flex flex-col items-center justify-center h-screen gap-4">
             <h1 className="text-3xl font-bold text-destructive">403 - Unauthorized</h1>
