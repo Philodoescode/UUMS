@@ -35,26 +35,26 @@ async function getAssessmentMetadata(assessmentId) {
   const values = await sequelize.query(
     `SELECT 
        av.id,
-       av."attributeId",
+       av.attribute_id as "attributeId",
        ad.name as attribute_name,
-       ad."displayName" as attribute_display_name,
+       ad.display_name as attribute_display_name,
        ad.description as attribute_description,
-       ad."valueType",
-       av."valueString",
-       av."valueInteger",
-       av."valueDecimal",
-       av."valueBoolean",
-       av."valueText",
-       av."valueJson",
-       av."sortOrder"
+       ad.value_type as "valueType",
+       av.value_string as "valueString",
+       av.value_integer as "valueInteger",
+       av.value_decimal as "valueDecimal",
+       av.value_boolean as "valueBoolean",
+       av.value_text as "valueText",
+       av.value_json as "valueJson",
+       av.sort_order as "sortOrder"
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
-     JOIN entity_types et ON ad."entityTypeId" = et.id
-     WHERE av."entityId" = :assessmentId
-       AND av."entityType" = :entityType
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
+     JOIN entity_types et ON ad.entity_type_id = et.id
+     WHERE av.entity_id = :assessmentId
+       AND av.entity_type = :entityType
        AND av."deletedAt" IS NULL
        AND ad."deletedAt" IS NULL
-     ORDER BY ad."sortOrder", av."sortOrder"`,
+     ORDER BY ad.sort_order, av.sort_order`,
     {
       replacements: { assessmentId, entityType: ENTITY_TYPE_NAME },
       type: sequelize.QueryTypes.SELECT,
@@ -118,30 +118,30 @@ async function getAssessmentMetadataWithDetails(assessmentId) {
   const values = await sequelize.query(
     `SELECT 
        av.id as value_id,
-       av."attributeId",
+       av.attribute_id as "attributeId",
        ad.name as attribute_name,
-       ad."displayName" as display_name,
+       ad.display_name,
        ad.description,
-       ad."valueType",
-       ad."isRequired",
-       ad."validationRules",
-       av."valueString",
-       av."valueInteger",
-       av."valueDecimal",
-       av."valueBoolean",
-       av."valueText",
-       av."valueJson",
-       av."sortOrder",
+       ad.value_type as "valueType",
+       ad.is_required as "isRequired",
+       ad.validation_rules as "validationRules",
+       av.value_string as "valueString",
+       av.value_integer as "valueInteger",
+       av.value_decimal as "valueDecimal",
+       av.value_boolean as "valueBoolean",
+       av.value_text as "valueText",
+       av.value_json as "valueJson",
+       av.sort_order as "sortOrder",
        av."createdAt",
        av."updatedAt"
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
-     JOIN entity_types et ON ad."entityTypeId" = et.id
-     WHERE av."entityId" = :assessmentId
-       AND av."entityType" = :entityType
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
+     JOIN entity_types et ON ad.entity_type_id = et.id
+     WHERE av.entity_id = :assessmentId
+       AND av.entity_type = :entityType
        AND av."deletedAt" IS NULL
        AND ad."deletedAt" IS NULL
-     ORDER BY ad."sortOrder", av."sortOrder"`,
+     ORDER BY ad.sort_order, av.sort_order`,
     {
       replacements: { assessmentId, entityType: ENTITY_TYPE_NAME },
       type: sequelize.QueryTypes.SELECT,
@@ -210,9 +210,9 @@ async function setAssessmentMetadata(assessmentId, attributeName, value) {
 
     // Get attribute definition
     const [attrDef] = await sequelize.query(
-      `SELECT id, "valueType", "isRequired", "validationRules" 
+      `SELECT id, value_type as "valueType", is_required as "isRequired", validation_rules as "validationRules" 
        FROM attribute_definitions 
-       WHERE "entityTypeId" = :entityTypeId AND name = :name AND "deletedAt" IS NULL`,
+       WHERE entity_type_id = :entityTypeId AND name = :name AND "deletedAt" IS NULL`,
       {
         replacements: { entityTypeId: entityType.id, name: attributeName },
         type: sequelize.QueryTypes.SELECT,
@@ -232,9 +232,9 @@ async function setAssessmentMetadata(assessmentId, attributeName, value) {
     // Check for existing value
     const [existingValue] = await sequelize.query(
       `SELECT id FROM attribute_values 
-       WHERE "attributeId" = :attributeId 
-         AND "entityId" = :entityId 
-         AND "entityType" = :entityType
+       WHERE attribute_id = :attributeId 
+         AND entity_id = :entityId 
+         AND entity_type = :entityType
          AND "deletedAt" IS NULL`,
       {
         replacements: { 
@@ -247,34 +247,34 @@ async function setAssessmentMetadata(assessmentId, attributeName, value) {
       }
     );
 
-    // Prepare value columns
+    // Prepare value columns (snake_case for DB)
     const valueColumns = {
-      valueString: null,
-      valueInteger: null,
-      valueDecimal: null,
-      valueBoolean: null,
-      valueText: null,
-      valueJson: null,
+      value_string: null,
+      value_integer: null,
+      value_decimal: null,
+      value_boolean: null,
+      value_text: null,
+      value_json: null,
     };
 
     switch (attrDef.valueType) {
       case 'string':
-        valueColumns.valueString = String(value).substring(0, 500);
+        valueColumns.value_string = String(value).substring(0, 500);
         break;
       case 'integer':
-        valueColumns.valueInteger = parseInt(value, 10);
+        valueColumns.value_integer = parseInt(value, 10);
         break;
       case 'decimal':
-        valueColumns.valueDecimal = parseFloat(value);
+        valueColumns.value_decimal = parseFloat(value);
         break;
       case 'boolean':
-        valueColumns.valueBoolean = Boolean(value);
+        valueColumns.value_boolean = Boolean(value);
         break;
       case 'text':
-        valueColumns.valueText = String(value);
+        valueColumns.value_text = String(value);
         break;
       case 'json':
-        valueColumns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+        valueColumns.value_json = typeof value === 'string' ? value : JSON.stringify(value);
         break;
     }
 
@@ -284,12 +284,12 @@ async function setAssessmentMetadata(assessmentId, attributeName, value) {
       // Update existing
       await sequelize.query(
         `UPDATE attribute_values 
-         SET "valueString" = :valueString,
-             "valueInteger" = :valueInteger,
-             "valueDecimal" = :valueDecimal,
-             "valueBoolean" = :valueBoolean,
-             "valueText" = :valueText,
-             "valueJson" = :valueJson,
+         SET value_string = :value_string,
+             value_integer = :value_integer,
+             value_decimal = :value_decimal,
+             value_boolean = :value_boolean,
+             value_text = :value_text,
+             value_json = :value_json,
              "updatedAt" = NOW()
          WHERE id = :id`,
         {
@@ -303,19 +303,18 @@ async function setAssessmentMetadata(assessmentId, attributeName, value) {
       resultId = uuidv4();
       await sequelize.query(
         `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueText", "valueJson", "sortOrder", "createdAt", "updatedAt")
-         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueText, :valueJson, 0, NOW(), NOW())`,
+         (id, attribute_id, entity_type, entity_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_text, value_json, sort_order, "createdAt", "updatedAt")
+         VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_text, :value_json, 0, NOW(), NOW())`,
         {
           replacements: {
             id: resultId,
-            attributeId: attrDef.id,
-            entityType: ENTITY_TYPE_NAME,
-            entityId: assessmentId,
-            valueType: attrDef.valueType,
+            attribute_id: attrDef.id,
+            entity_type: ENTITY_TYPE_NAME,
+            entity_id: assessmentId,
             ...valueColumns,
           },
           transaction,
@@ -372,9 +371,9 @@ async function bulkSetAssessmentMetadata(assessmentId, metadata) {
     // Get all relevant attribute definitions
     const attributeNames = Object.keys(normalizedMetadata);
     const attrDefs = await sequelize.query(
-      `SELECT id, name, "valueType", "isRequired", "validationRules"
+      `SELECT id, name, value_type as "valueType", is_required as "isRequired", validation_rules as "validationRules"
        FROM attribute_definitions 
-       WHERE "entityTypeId" = :entityTypeId 
+       WHERE entity_type_id = :entityTypeId 
          AND name IN (:attributeNames) 
          AND "deletedAt" IS NULL`,
       {
@@ -390,10 +389,10 @@ async function bulkSetAssessmentMetadata(assessmentId, metadata) {
     const existingValues = await sequelize.query(
       `SELECT av.id, ad.name as "attributeName"
        FROM attribute_values av
-       JOIN attribute_definitions ad ON av."attributeId" = ad.id
-       WHERE ad."entityTypeId" = :entityTypeId
-         AND av."entityId" = :entityId 
-         AND av."entityType" = :entityType
+       JOIN attribute_definitions ad ON av.attribute_id = ad.id
+       WHERE ad.entity_type_id = :entityTypeId
+         AND av.entity_id = :entityId 
+         AND av.entity_type = :entityType
          AND av."deletedAt" IS NULL`,
       {
         replacements: { 
@@ -416,34 +415,34 @@ async function bulkSetAssessmentMetadata(assessmentId, metadata) {
         continue;
       }
 
-      // Prepare value columns
+      // Prepare value columns (snake_case for DB)
       const valueColumns = {
-        valueString: null,
-        valueInteger: null,
-        valueDecimal: null,
-        valueBoolean: null,
-        valueText: null,
-        valueJson: null,
+        value_string: null,
+        value_integer: null,
+        value_decimal: null,
+        value_boolean: null,
+        value_text: null,
+        value_json: null,
       };
 
       switch (attrDef.valueType) {
         case 'string':
-          valueColumns.valueString = String(value).substring(0, 500);
+          valueColumns.value_string = String(value).substring(0, 500);
           break;
         case 'integer':
-          valueColumns.valueInteger = parseInt(value, 10);
+          valueColumns.value_integer = parseInt(value, 10);
           break;
         case 'decimal':
-          valueColumns.valueDecimal = parseFloat(value);
+          valueColumns.value_decimal = parseFloat(value);
           break;
         case 'boolean':
-          valueColumns.valueBoolean = Boolean(value);
+          valueColumns.value_boolean = Boolean(value);
           break;
         case 'text':
-          valueColumns.valueText = String(value);
+          valueColumns.value_text = String(value);
           break;
         case 'json':
-          valueColumns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+          valueColumns.value_json = typeof value === 'string' ? value : JSON.stringify(value);
           break;
       }
 
@@ -452,12 +451,12 @@ async function bulkSetAssessmentMetadata(assessmentId, metadata) {
       if (existingId) {
         await sequelize.query(
           `UPDATE attribute_values 
-           SET "valueString" = :valueString,
-               "valueInteger" = :valueInteger,
-               "valueDecimal" = :valueDecimal,
-               "valueBoolean" = :valueBoolean,
-               "valueText" = :valueText,
-               "valueJson" = :valueJson,
+           SET value_string = :value_string,
+               value_integer = :value_integer,
+               value_decimal = :value_decimal,
+               value_boolean = :value_boolean,
+               value_text = :value_text,
+               value_json = :value_json,
                "updatedAt" = NOW()
            WHERE id = :id`,
           {
@@ -470,19 +469,18 @@ async function bulkSetAssessmentMetadata(assessmentId, metadata) {
         const newId = uuidv4();
         await sequelize.query(
           `INSERT INTO attribute_values 
-           (id, "attributeId", "entityType", "entityId", "valueType",
-            "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-            "valueText", "valueJson", "sortOrder", "createdAt", "updatedAt")
-           VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                   :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                   :valueText, :valueJson, 0, NOW(), NOW())`,
+           (id, attribute_id, entity_type, entity_id,
+            value_string, value_integer, value_decimal, value_boolean,
+            value_text, value_json, sort_order, "createdAt", "updatedAt")
+           VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                   :value_string, :value_integer, :value_decimal, :value_boolean,
+                   :value_text, :value_json, 0, NOW(), NOW())`,
           {
             replacements: {
               id: newId,
-              attributeId: attrDef.id,
-              entityType: ENTITY_TYPE_NAME,
-              entityId: assessmentId,
-              valueType: attrDef.valueType,
+              attribute_id: attrDef.id,
+              entity_type: ENTITY_TYPE_NAME,
+              entity_id: assessmentId,
               ...valueColumns,
             },
             transaction,
@@ -512,10 +510,10 @@ async function deleteAssessmentMetadata(assessmentId, attributeName) {
     `UPDATE attribute_values av
      SET "deletedAt" = NOW()
      FROM attribute_definitions ad
-     JOIN entity_types et ON ad."entityTypeId" = et.id
-     WHERE av."attributeId" = ad.id
-       AND av."entityId" = :assessmentId
-       AND av."entityType" = :entityType
+     JOIN entity_types et ON ad.entity_type_id = et.id
+     WHERE av.attribute_id = ad.id
+       AND av.entity_id = :assessmentId
+       AND av.entity_type = :entityType
        AND ad.name = :attributeName
        AND et.name = :entityTypeName
        AND av."deletedAt" IS NULL
@@ -543,20 +541,20 @@ async function getAvailableMetadataAttributes() {
     `SELECT 
        ad.id,
        ad.name,
-       ad."displayName",
+       ad.display_name as "displayName",
        ad.description,
-       ad."valueType",
-       ad."isRequired",
-       ad."isMultiValued",
-       ad."defaultValue",
-       ad."validationRules",
-       ad."sortOrder"
+       ad.value_type as "valueType",
+       ad.is_required as "isRequired",
+       ad.is_multi_valued as "isMultiValued",
+       ad.default_value as "defaultValue",
+       ad.validation_rules as "validationRules",
+       ad.sort_order as "sortOrder"
      FROM attribute_definitions ad
-     JOIN entity_types et ON ad."entityTypeId" = et.id
+     JOIN entity_types et ON ad.entity_type_id = et.id
      WHERE et.name = :entityType
        AND ad."deletedAt" IS NULL
-       AND ad."isActive" = true
-     ORDER BY ad."sortOrder"`,
+       AND ad.is_active = true
+     ORDER BY ad.sort_order`,
     {
       replacements: { entityType: ENTITY_TYPE_NAME },
       type: sequelize.QueryTypes.SELECT,
@@ -586,10 +584,10 @@ async function hasAssessmentMetadata(assessmentId) {
   const [result] = await sequelize.query(
     `SELECT COUNT(*) as count
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
-     JOIN entity_types et ON ad."entityTypeId" = et.id
-     WHERE av."entityId" = :assessmentId
-       AND av."entityType" = :entityType
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
+     JOIN entity_types et ON ad.entity_type_id = et.id
+     WHERE av.entity_id = :assessmentId
+       AND av.entity_type = :entityType
        AND et.name = :entityTypeName
        AND av."deletedAt" IS NULL`,
     {

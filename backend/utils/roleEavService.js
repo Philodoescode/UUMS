@@ -122,29 +122,30 @@ async function getRolePermissions(roleId) {
     const replacements = { roleId };
 
     if (useSpecificTable) {
-      // Use entity-specific role_attribute_values table
+      // Use entity-specific role_attribute_values table (snake_case columns)
+      // Note: valueType now comes from attribute_definitions JOIN
       query = `
         SELECT ad.name, ad."valueType", ad."defaultValue",
-               rav."valueString", rav."valueInteger", rav."valueDecimal", 
-               rav."valueBoolean", rav."valueDate", rav."valueDatetime", 
-               rav."valueText", rav."valueJson"
+               rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
+               rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
+               rav.value_text as "valueText", rav.value_json as "valueJson"
         FROM attribute_definitions ad
         JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN role_attribute_values rav ON ad.id = rav."attributeId" 
-          AND rav."roleId" = :roleId
+        LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
+          AND rav.role_id = :roleId
         WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
         ORDER BY ad."sortOrder"`;
     } else {
-      // Use generic attribute_values table (legacy)
+      // Use generic attribute_values table (snake_case columns)
       query = `
         SELECT ad.name, ad."valueType", ad."defaultValue",
-               av."valueString", av."valueInteger", av."valueDecimal", 
-               av."valueBoolean", av."valueDate", av."valueDatetime", 
-               av."valueText", av."valueJson"
+               av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
+               av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", 
+               av.value_text as "valueText", av.value_json as "valueJson"
         FROM attribute_definitions ad
         JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
-          AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
+        LEFT JOIN attribute_values av ON ad.id = av.attribute_id 
+          AND av.entity_type = 'Role' AND av.entity_id = :roleId AND av."deletedAt" IS NULL
         WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
         ORDER BY ad."sortOrder"`;
     }
@@ -190,25 +191,25 @@ async function getRolePermission(roleId, permissionName) {
     if (useSpecificTable) {
       query = `
         SELECT ad.name, ad."valueType", ad."defaultValue",
-               rav."valueString", rav."valueInteger", rav."valueDecimal", 
-               rav."valueBoolean", rav."valueDate", rav."valueDatetime", 
-               rav."valueText", rav."valueJson"
+               rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
+               rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
+               rav.value_text as "valueText", rav.value_json as "valueJson"
         FROM attribute_definitions ad
         JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN role_attribute_values rav ON ad.id = rav."attributeId" 
-          AND rav."roleId" = :roleId
+        LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
+          AND rav.role_id = :roleId
         WHERE et.name = 'Role' AND ad.name = :permissionName 
           AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
     } else {
       query = `
         SELECT ad.name, ad."valueType", ad."defaultValue",
-               av."valueString", av."valueInteger", av."valueDecimal", 
-               av."valueBoolean", av."valueDate", av."valueDatetime", 
-               av."valueText", av."valueJson"
+               av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
+               av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", 
+               av.value_text as "valueText", av.value_json as "valueJson"
         FROM attribute_definitions ad
         JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN attribute_values av ON ad.id = av."attributeId" 
-          AND av."entityType" = 'Role' AND av."entityId" = :roleId AND av."deletedAt" IS NULL
+        LEFT JOIN attribute_values av ON ad.id = av.attribute_id 
+          AND av.entity_type = 'Role' AND av.entity_id = :roleId AND av."deletedAt" IS NULL
         WHERE et.name = 'Role' AND ad.name = :permissionName 
           AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
     }
@@ -270,39 +271,38 @@ async function setRolePermission(roleId, permissionName, value) {
     
     const { id: attributeId, valueType } = attrDef[0];
     
-    // Prepare value columns for upsert
+    // Prepare value columns for upsert (snake_case for DB)
     const valueColumns = prepareValueColumnsForRole(value, valueType);
     let wasInserted;
 
     if (useSpecificTable) {
-      // Use entity-specific role_attribute_values table
+      // Use entity-specific role_attribute_values table (snake_case, no valueType)
       const [upsertResult] = await sequelize.query(
         `INSERT INTO role_attribute_values 
-         ("roleId", "attributeId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt")
-         VALUES (:roleId, :attributeId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
+         (role_id, attribute_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt")
+         VALUES (:role_id, :attribute_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
                  0, NOW(), NOW())
-         ON CONFLICT ("roleId", "attributeId") 
+         ON CONFLICT (role_id, attribute_id) 
          DO UPDATE SET
-           "valueString" = EXCLUDED."valueString",
-           "valueInteger" = EXCLUDED."valueInteger",
-           "valueDecimal" = EXCLUDED."valueDecimal",
-           "valueBoolean" = EXCLUDED."valueBoolean",
-           "valueDate" = EXCLUDED."valueDate",
-           "valueDatetime" = EXCLUDED."valueDatetime",
-           "valueText" = EXCLUDED."valueText",
-           "valueJson" = EXCLUDED."valueJson",
+           value_string = EXCLUDED.value_string,
+           value_integer = EXCLUDED.value_integer,
+           value_decimal = EXCLUDED.value_decimal,
+           value_boolean = EXCLUDED.value_boolean,
+           value_date = EXCLUDED.value_date,
+           value_datetime = EXCLUDED.value_datetime,
+           value_text = EXCLUDED.value_text,
+           value_json = EXCLUDED.value_json,
            "updatedAt" = NOW()
          RETURNING (xmax = 0) AS inserted`,
         {
           replacements: {
-            attributeId,
-            roleId,
-            valueType,
+            attribute_id: attributeId,
+            role_id: roleId,
             ...valueColumns,
           },
           type: QueryTypes.SELECT,
@@ -311,35 +311,34 @@ async function setRolePermission(roleId, permissionName, value) {
       );
       wasInserted = upsertResult?.inserted === true;
     } else {
-      // Use generic attribute_values table (legacy)
+      // Use generic attribute_values table (snake_case, no valueType)
       const [upsertResult] = await sequelize.query(
         `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt", "deletedAt")
-         VALUES (gen_random_uuid(), :attributeId, 'Role', :roleId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
+         (id, attribute_id, entity_type, entity_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt", "deletedAt")
+         VALUES (gen_random_uuid(), :attribute_id, 'Role', :role_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
                  0, NOW(), NOW(), NULL)
-         ON CONFLICT ("entityType", "entityId", "attributeId") 
+         ON CONFLICT (entity_type, entity_id, attribute_id) 
          WHERE "deletedAt" IS NULL
          DO UPDATE SET
-           "valueString" = EXCLUDED."valueString",
-           "valueInteger" = EXCLUDED."valueInteger",
-           "valueDecimal" = EXCLUDED."valueDecimal",
-           "valueBoolean" = EXCLUDED."valueBoolean",
-           "valueDate" = EXCLUDED."valueDate",
-           "valueDatetime" = EXCLUDED."valueDatetime",
-           "valueText" = EXCLUDED."valueText",
-           "valueJson" = EXCLUDED."valueJson",
+           value_string = EXCLUDED.value_string,
+           value_integer = EXCLUDED.value_integer,
+           value_decimal = EXCLUDED.value_decimal,
+           value_boolean = EXCLUDED.value_boolean,
+           value_date = EXCLUDED.value_date,
+           value_datetime = EXCLUDED.value_datetime,
+           value_text = EXCLUDED.value_text,
+           value_json = EXCLUDED.value_json,
            "updatedAt" = NOW()
          RETURNING id, (xmax = 0) AS inserted`,
         {
           replacements: {
-            attributeId,
-            roleId,
-            valueType,
+            attribute_id: attributeId,
+            role_id: roleId,
             ...valueColumns,
           },
           type: QueryTypes.SELECT,
@@ -367,21 +366,21 @@ async function setRolePermission(roleId, permissionName, value) {
 }
 
 /**
- * Prepare value columns for upsert based on value type
+ * Prepare value columns for upsert based on value type (snake_case for DB)
  * @param {any} value - The value to store
  * @param {string} valueType - The type of the value
  * @returns {Object} Object with all value columns
  */
 function prepareValueColumnsForRole(value, valueType) {
   const columns = {
-    valueString: null,
-    valueInteger: null,
-    valueDecimal: null,
-    valueBoolean: null,
-    valueDate: null,
-    valueDatetime: null,
-    valueText: null,
-    valueJson: null,
+    value_string: null,
+    value_integer: null,
+    value_decimal: null,
+    value_boolean: null,
+    value_date: null,
+    value_datetime: null,
+    value_text: null,
+    value_json: null,
   };
 
   if (value === null || value === undefined) {
@@ -390,31 +389,31 @@ function prepareValueColumnsForRole(value, valueType) {
 
   switch (valueType) {
     case 'string':
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
       break;
     case 'integer':
-      columns.valueInteger = parseInt(value, 10);
+      columns.value_integer = parseInt(value, 10);
       break;
     case 'decimal':
-      columns.valueDecimal = parseFloat(value);
+      columns.value_decimal = parseFloat(value);
       break;
     case 'boolean':
-      columns.valueBoolean = Boolean(value);
+      columns.value_boolean = Boolean(value);
       break;
     case 'date':
-      columns.valueDate = value instanceof Date ? value.toISOString().split('T')[0] : value;
+      columns.value_date = value instanceof Date ? value.toISOString().split('T')[0] : value;
       break;
     case 'datetime':
-      columns.valueDatetime = value instanceof Date ? value : new Date(value);
+      columns.value_datetime = value instanceof Date ? value : new Date(value);
       break;
     case 'text':
-      columns.valueText = String(value);
+      columns.value_text = String(value);
       break;
     case 'json':
-      columns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+      columns.value_json = typeof value === 'string' ? value : JSON.stringify(value);
       break;
     default:
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
   }
 
   return columns;
@@ -635,16 +634,16 @@ async function deleteRolePermission(roleId, permissionName) {
 
   try {
     if (useSpecificTable) {
-      // Delete from entity-specific table
+      // Delete from entity-specific table (snake_case)
       const result = await sequelize.query(
         `DELETE FROM role_attribute_values rav
          USING attribute_definitions ad, entity_types et
-         WHERE rav."attributeId" = ad.id
-           AND ad."entityTypeId" = et.id
-           AND rav."roleId" = :roleId
+         WHERE rav.attribute_id = ad.id
+           AND ad.entity_type_id = et.id
+           AND rav.role_id = :roleId
            AND ad.name = :permissionName
            AND et.name = 'Role'
-         RETURNING rav."roleId"`,
+         RETURNING rav.role_id`,
         {
           replacements: { roleId, permissionName },
           type: QueryTypes.SELECT,
@@ -652,15 +651,15 @@ async function deleteRolePermission(roleId, permissionName) {
       );
       return { success: true, deleted: result.length > 0 };
     } else {
-      // Soft delete from generic attribute_values table (legacy)
+      // Soft delete from generic attribute_values table (snake_case)
       const result = await sequelize.query(
         `UPDATE attribute_values av
          SET "deletedAt" = NOW()
          FROM attribute_definitions ad
-         JOIN entity_types et ON ad."entityTypeId" = et.id
-         WHERE av."attributeId" = ad.id
-           AND av."entityId" = :roleId
-           AND av."entityType" = 'Role'
+         JOIN entity_types et ON ad.entity_type_id = et.id
+         WHERE av.attribute_id = ad.id
+           AND av.entity_id = :roleId
+           AND av.entity_type = 'Role'
            AND ad.name = :permissionName
            AND et.name = 'Role'
            AND av."deletedAt" IS NULL
@@ -745,23 +744,23 @@ function parseDefaultValue(defaultValue, valueType) {
 function getValueColumn(valueType) {
   switch (valueType) {
     case 'boolean':
-      return '"valueBoolean"';
+      return 'value_boolean';
     case 'integer':
-      return '"valueInteger"';
+      return 'value_integer';
     case 'decimal':
-      return '"valueDecimal"';
+      return 'value_decimal';
     case 'string':
-      return '"valueString"';
+      return 'value_string';
     case 'text':
-      return '"valueText"';
+      return 'value_text';
     case 'date':
-      return '"valueDate"';
+      return 'value_date';
     case 'datetime':
-      return '"valueDatetime"';
+      return 'value_datetime';
     case 'json':
-      return '"valueJson"';
+      return 'value_json';
     default:
-      return '"valueString"';
+      return 'value_string';
   }
 }
 

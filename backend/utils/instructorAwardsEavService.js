@@ -40,23 +40,23 @@ async function getAwardsFromEav(instructorId) {
   const values = await sequelize.query(
     `SELECT 
        av.id,
-       av."attributeId",
+       av.attribute_id as "attributeId",
        ad.name as attribute_name,
-       ad."displayName" as attribute_display_name,
-       av."valueType",
-       av."valueString",
-       av."valueInteger",
-       av."valueText",
-       av."sortOrder"
+       ad.display_name as attribute_display_name,
+       ad.value_type as "valueType",
+       av.value_string as "valueString",
+       av.value_integer as "valueInteger",
+       av.value_text as "valueText",
+       av.sort_order as "sortOrder"
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
-     JOIN entity_types et ON ad."entityTypeId" = et.id
-     WHERE av."entityId" = :instructorId
-       AND av."entityType" = :entityType
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
+     JOIN entity_types et ON ad.entity_type_id = et.id
+     WHERE av.entity_id = :instructorId
+       AND av.entity_type = :entityType
        AND ad.name LIKE 'award_%'
        AND av."deletedAt" IS NULL
        AND ad."deletedAt" IS NULL
-     ORDER BY av."sortOrder", ad."sortOrder"`,
+     ORDER BY av.sort_order, ad.sort_order`,
     {
       replacements: { instructorId, entityType: ENTITY_TYPE_NAME },
       type: sequelize.QueryTypes.SELECT,
@@ -73,7 +73,7 @@ async function getAwardsFromEav(instructorId) {
 
   for (const value of values) {
     if (value.attribute_name === 'award_group_id') {
-      currentGroupId = value.valueString;
+      currentGroupId = value.valueString;  // Uses aliased column
       if (!awardsMap.has(currentGroupId)) {
         awardsMap.set(currentGroupId, { _groupId: currentGroupId });
       }
@@ -191,8 +191,8 @@ async function addInstructorAward(instructorId, awardData) {
 
     // Get attribute definitions
     const attributeDefs = await sequelize.query(
-      `SELECT id, name, "valueType" FROM attribute_definitions 
-       WHERE "entityTypeId" = :entityTypeId AND name LIKE 'award_%' AND "deletedAt" IS NULL`,
+      `SELECT id, name, value_type as "valueType" FROM attribute_definitions 
+       WHERE entity_type_id = :entityTypeId AND name LIKE 'award_%' AND "deletedAt" IS NULL`,
       {
         replacements: { entityTypeId: entityType.id },
         type: sequelize.QueryTypes.SELECT,
@@ -207,9 +207,9 @@ async function addInstructorAward(instructorId, awardData) {
     
     // Get the next sort order
     const [maxSort] = await sequelize.query(
-      `SELECT COALESCE(MAX("sortOrder"), -1) + 1 as next_order 
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order 
        FROM attribute_values 
-       WHERE "entityId" = :instructorId AND "entityType" = :entityType AND "deletedAt" IS NULL`,
+       WHERE entity_id = :instructorId AND entity_type = :entityType AND "deletedAt" IS NULL`,
       {
         replacements: { instructorId, entityType: ENTITY_TYPE_NAME },
         type: sequelize.QueryTypes.SELECT,
@@ -253,40 +253,39 @@ async function addInstructorAward(instructorId, awardData) {
       if (!attrDef) continue;
 
       const valueColumns = {
-        valueString: null,
-        valueInteger: null,
-        valueText: null,
+        value_string: null,
+        value_integer: null,
+        value_text: null,
       };
 
       switch (attrDef.valueType || item.valueType) {
         case 'string':
-          valueColumns.valueString = String(item.value).substring(0, 500);
+          valueColumns.value_string = String(item.value).substring(0, 500);
           break;
         case 'integer':
-          valueColumns.valueInteger = parseInt(item.value, 10);
+          valueColumns.value_integer = parseInt(item.value, 10);
           break;
         case 'text':
-          valueColumns.valueText = String(item.value);
+          valueColumns.value_text = String(item.value);
           break;
       }
 
       await sequelize.query(
         `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType", 
-          "valueString", "valueInteger", "valueText", "sortOrder", "createdAt", "updatedAt")
-         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                 :valueString, :valueInteger, :valueText, :sortOrder, NOW(), NOW())`,
+         (id, attribute_id, entity_type, entity_id, 
+          value_string, value_integer, value_text, sort_order, "createdAt", "updatedAt")
+         VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                 :value_string, :value_integer, :value_text, :sort_order, NOW(), NOW())`,
         {
           replacements: {
             id: uuidv4(),
-            attributeId: attrDef.id,
-            entityType: ENTITY_TYPE_NAME,
-            entityId: instructorId,
-            valueType: attrDef.valueType || item.valueType,
-            valueString: valueColumns.valueString,
-            valueInteger: valueColumns.valueInteger,
-            valueText: valueColumns.valueText,
-            sortOrder,
+            attribute_id: attrDef.id,
+            entity_type: ENTITY_TYPE_NAME,
+            entity_id: instructorId,
+            value_string: valueColumns.value_string,
+            value_integer: valueColumns.value_integer,
+            value_text: valueColumns.value_text,
+            sort_order: sortOrder,
           },
           transaction,
         }
@@ -334,9 +333,9 @@ async function updateInstructorAward(instructorId, awardGroupId, awardData) {
     for (const [field, attrName] of Object.entries(fieldToAttr)) {
       if (awardData[field] !== undefined) {
         const [attrDef] = await sequelize.query(
-          `SELECT ad.id, ad."valueType" 
+          `SELECT ad.id, ad.value_type as "valueType" 
            FROM attribute_definitions ad
-           JOIN entity_types et ON ad."entityTypeId" = et.id
+           JOIN entity_types et ON ad.entity_type_id = et.id
            WHERE et.name = :entityType AND ad.name = :attrName AND ad."deletedAt" IS NULL`,
           {
             replacements: { entityType: ENTITY_TYPE_NAME, attrName },
@@ -349,13 +348,13 @@ async function updateInstructorAward(instructorId, awardGroupId, awardData) {
 
         // Find the existing value by matching the group ID's sortOrder
         const [groupValue] = await sequelize.query(
-          `SELECT av."sortOrder" 
+          `SELECT av.sort_order as "sortOrder" 
            FROM attribute_values av
-           JOIN attribute_definitions ad ON av."attributeId" = ad.id
-           WHERE av."entityId" = :instructorId 
-             AND av."entityType" = :entityType
+           JOIN attribute_definitions ad ON av.attribute_id = ad.id
+           WHERE av.entity_id = :instructorId 
+             AND av.entity_type = :entityType
              AND ad.name = 'award_group_id'
-             AND av."valueString" = :awardGroupId
+             AND av.value_string = :awardGroupId
              AND av."deletedAt" IS NULL`,
           {
             replacements: { instructorId, entityType: ENTITY_TYPE_NAME, awardGroupId },
@@ -370,19 +369,19 @@ async function updateInstructorAward(instructorId, awardGroupId, awardData) {
 
         const sortOrder = groupValue.sortOrder;
 
-        // Build update based on value type
-        const valueColumn = attrDef.valueType === 'integer' ? 'valueInteger' :
-                           attrDef.valueType === 'text' ? 'valueText' : 'valueString';
+        // Build update based on value type (snake_case columns)
+        const valueColumn = attrDef.valueType === 'integer' ? 'value_integer' :
+                           attrDef.valueType === 'text' ? 'value_text' : 'value_string';
         const valueToSet = attrDef.valueType === 'integer' ? parseInt(awardData[field], 10) :
                           String(awardData[field]);
 
         await sequelize.query(
           `UPDATE attribute_values 
-           SET "${valueColumn}" = :value, "updatedAt" = NOW()
-           WHERE "entityId" = :instructorId 
-             AND "entityType" = :entityType
-             AND "attributeId" = :attrId
-             AND "sortOrder" = :sortOrder
+           SET ${valueColumn} = :value, "updatedAt" = NOW()
+           WHERE entity_id = :instructorId 
+             AND entity_type = :entityType
+             AND attribute_id = :attrId
+             AND sort_order = :sortOrder
              AND "deletedAt" IS NULL`,
           {
             replacements: {
@@ -416,13 +415,13 @@ async function updateInstructorAward(instructorId, awardGroupId, awardData) {
 async function deleteInstructorAward(instructorId, awardGroupId) {
   // Find the sortOrder for this award group
   const [groupValue] = await sequelize.query(
-    `SELECT av."sortOrder" 
+    `SELECT av.sort_order as "sortOrder" 
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
-     WHERE av."entityId" = :instructorId 
-       AND av."entityType" = :entityType
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
+     WHERE av.entity_id = :instructorId 
+       AND av.entity_type = :entityType
        AND ad.name = 'award_group_id'
-       AND av."valueString" = :awardGroupId
+       AND av.value_string = :awardGroupId
        AND av."deletedAt" IS NULL`,
     {
       replacements: { instructorId, entityType: ENTITY_TYPE_NAME, awardGroupId },
@@ -438,9 +437,9 @@ async function deleteInstructorAward(instructorId, awardGroupId) {
   await sequelize.query(
     `UPDATE attribute_values 
      SET "deletedAt" = NOW()
-     WHERE "entityId" = :instructorId 
-       AND "entityType" = :entityType
-       AND "sortOrder" = :sortOrder
+     WHERE entity_id = :instructorId 
+       AND entity_type = :entityType
+       AND sort_order = :sortOrder
        AND "deletedAt" IS NULL`,
     {
       replacements: {

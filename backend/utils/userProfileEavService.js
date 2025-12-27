@@ -105,27 +105,27 @@ async function getUserProfile(userId, options = {}) {
   const replacements = { userId };
 
   if (useSpecificTable) {
-    // Use entity-specific user_attribute_values table
+    // Use entity-specific user_attribute_values table (snake_case columns)
     fromClause = `
       FROM user_attribute_values uav
-      JOIN attribute_definitions ad ON uav."attributeId" = ad.id
+      JOIN attribute_definitions ad ON uav.attribute_id = ad.id
       JOIN entity_types et ON ad."entityTypeId" = et.id
     `;
     whereClause = `
-      WHERE uav."userId" = :userId
+      WHERE uav.user_id = :userId
         AND ad."deletedAt" IS NULL
         AND ad."isActive" = true
     `;
   } else {
-    // Use generic attribute_values table (legacy)
+    // Use generic attribute_values table (snake_case columns)
     fromClause = `
       FROM attribute_values av
-      JOIN attribute_definitions ad ON av."attributeId" = ad.id
+      JOIN attribute_definitions ad ON av.attribute_id = ad.id
       JOIN entity_types et ON ad."entityTypeId" = et.id
     `;
     whereClause = `
-      WHERE av."entityId" = :userId
-        AND av."entityType" = :entityType
+      WHERE av.entity_id = :userId
+        AND av.entity_type = :entityType
         AND av."deletedAt" IS NULL
         AND ad."deletedAt" IS NULL
         AND ad."isActive" = true
@@ -143,14 +143,15 @@ async function getUserProfile(userId, options = {}) {
     replacements.attributeNames = attributeNames;
   }
 
-  // Build SELECT columns based on table source
+  // Build SELECT columns based on table source (snake_case in DB, aliased to camelCase)
+  // Note: valueType now comes from attribute_definitions JOIN
   const valueColumns = useSpecificTable 
-    ? `uav."attributeId", uav."valueString", uav."valueInteger", uav."valueDecimal", 
-       uav."valueBoolean", uav."valueDate", uav."valueDatetime", uav."valueText", 
-       uav."valueJson", uav."sortOrder"`
-    : `av.id, av."attributeId", av."valueString", av."valueInteger", av."valueDecimal", 
-       av."valueBoolean", av."valueDate", av."valueDatetime", av."valueText", 
-       av."valueJson", av."sortOrder"`;
+    ? `uav.attribute_id as "attributeId", uav.value_string as "valueString", uav.value_integer as "valueInteger", uav.value_decimal as "valueDecimal", 
+       uav.value_boolean as "valueBoolean", uav.value_date as "valueDate", uav.value_datetime as "valueDatetime", uav.value_text as "valueText", 
+       uav.value_json as "valueJson", uav.sort_order as "sortOrder"`
+    : `av.id, av.attribute_id as "attributeId", av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
+       av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", av.value_text as "valueText", 
+       av.value_json as "valueJson", av.sort_order as "sortOrder"`;
 
   const values = await sequelize.query(
     `SELECT 
@@ -161,7 +162,7 @@ async function getUserProfile(userId, options = {}) {
        ad."valueType"
      ${fromClause}
      ${whereClause}
-     ORDER BY ad."sortOrder", ${useSpecificTable ? 'uav' : 'av'}."sortOrder"`,
+     ORDER BY ad."sortOrder", ${useSpecificTable ? 'uav' : 'av'}.sort_order`,
     {
       replacements,
       type: sequelize.QueryTypes.SELECT,
@@ -204,22 +205,22 @@ async function getUserProfileWithDetails(userId, options = {}) {
   if (useSpecificTable) {
     fromClause = `
       FROM user_attribute_values uav
-      JOIN attribute_definitions ad ON uav."attributeId" = ad.id
+      JOIN attribute_definitions ad ON uav.attribute_id = ad.id
       JOIN entity_types et ON ad."entityTypeId" = et.id
     `;
     whereClause = `
-      WHERE uav."userId" = :userId
+      WHERE uav.user_id = :userId
         AND ad."deletedAt" IS NULL
     `;
   } else {
     fromClause = `
       FROM attribute_values av
-      JOIN attribute_definitions ad ON av."attributeId" = ad.id
+      JOIN attribute_definitions ad ON av.attribute_id = ad.id
       JOIN entity_types et ON ad."entityTypeId" = et.id
     `;
     whereClause = `
-      WHERE av."entityId" = :userId
-        AND av."entityType" = :entityType
+      WHERE av.entity_id = :userId
+        AND av.entity_type = :entityType
         AND av."deletedAt" IS NULL
         AND ad."deletedAt" IS NULL
     `;
@@ -233,33 +234,34 @@ async function getUserProfileWithDetails(userId, options = {}) {
 
   const valueAlias = useSpecificTable ? 'uav' : 'av';
   const idColumn = useSpecificTable 
-    ? `CONCAT(uav."userId", '-', uav."attributeId") as value_id`
+    ? `CONCAT(uav.user_id, '-', uav.attribute_id) as value_id`
     : `${valueAlias}.id as value_id`;
 
+  // Note: valueType now comes from attribute_definitions JOIN
   const values = await sequelize.query(
     `SELECT 
        ${idColumn},
-       ${valueAlias}."attributeId",
+       ${valueAlias}.attribute_id as "attributeId",
        ad.name as attribute_name,
        ad."displayName" as display_name,
        ad.description,
        ad."valueType",
        ad."isRequired",
        ad."validationRules",
-       ${valueAlias}."valueString",
-       ${valueAlias}."valueInteger",
-       ${valueAlias}."valueDecimal",
-       ${valueAlias}."valueBoolean",
-       ${valueAlias}."valueDate",
-       ${valueAlias}."valueDatetime",
-       ${valueAlias}."valueText",
-       ${valueAlias}."valueJson",
-       ${valueAlias}."sortOrder",
+       ${valueAlias}.value_string as "valueString",
+       ${valueAlias}.value_integer as "valueInteger",
+       ${valueAlias}.value_decimal as "valueDecimal",
+       ${valueAlias}.value_boolean as "valueBoolean",
+       ${valueAlias}.value_date as "valueDate",
+       ${valueAlias}.value_datetime as "valueDatetime",
+       ${valueAlias}.value_text as "valueText",
+       ${valueAlias}.value_json as "valueJson",
+       ${valueAlias}.sort_order as "sortOrder",
        ${valueAlias}."createdAt",
        ${valueAlias}."updatedAt"
      ${fromClause}
      ${whereClause}
-     ORDER BY ad."sortOrder", ${valueAlias}."sortOrder"`,
+     ORDER BY ad."sortOrder", ${valueAlias}.sort_order`,
     {
       replacements,
       type: sequelize.QueryTypes.SELECT,
@@ -355,40 +357,39 @@ async function setUserProfileAttribute(userId, attributeName, value) {
       throw new Error(`Attribute '${attributeName}' is required`);
     }
 
-    // Prepare value columns
+    // Prepare value columns (snake_case for DB)
     const valueColumns = prepareValueColumns(value, attrDef.valueType);
     let resultId;
     let wasInserted;
 
     if (useSpecificTable) {
-      // Use entity-specific user_attribute_values table
+      // Use entity-specific user_attribute_values table (snake_case columns, no valueType)
       const [upsertResult] = await sequelize.query(
         `INSERT INTO user_attribute_values 
-         ("userId", "attributeId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt")
-         VALUES (:userId, :attributeId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
+         (user_id, attribute_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt")
+         VALUES (:user_id, :attribute_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
                  0, NOW(), NOW())
-         ON CONFLICT ("userId", "attributeId") 
+         ON CONFLICT (user_id, attribute_id) 
          DO UPDATE SET
-           "valueString" = EXCLUDED."valueString",
-           "valueInteger" = EXCLUDED."valueInteger",
-           "valueDecimal" = EXCLUDED."valueDecimal",
-           "valueBoolean" = EXCLUDED."valueBoolean",
-           "valueDate" = EXCLUDED."valueDate",
-           "valueDatetime" = EXCLUDED."valueDatetime",
-           "valueText" = EXCLUDED."valueText",
-           "valueJson" = EXCLUDED."valueJson",
+           value_string = EXCLUDED.value_string,
+           value_integer = EXCLUDED.value_integer,
+           value_decimal = EXCLUDED.value_decimal,
+           value_boolean = EXCLUDED.value_boolean,
+           value_date = EXCLUDED.value_date,
+           value_datetime = EXCLUDED.value_datetime,
+           value_text = EXCLUDED.value_text,
+           value_json = EXCLUDED.value_json,
            "updatedAt" = NOW()
-         RETURNING "userId", "attributeId", (xmax = 0) AS inserted`,
+         RETURNING user_id, attribute_id, (xmax = 0) AS inserted`,
         {
           replacements: {
-            userId,
-            attributeId: attrDef.id,
-            valueType: attrDef.valueType,
+            user_id: userId,
+            attribute_id: attrDef.id,
             ...valueColumns,
           },
           type: sequelize.QueryTypes.SELECT,
@@ -399,38 +400,37 @@ async function setUserProfileAttribute(userId, attributeName, value) {
       resultId = `${userId}-${attrDef.id}`;
       wasInserted = upsertResult?.inserted === true;
     } else {
-      // Use generic attribute_values table (legacy)
+      // Use generic attribute_values table (snake_case columns, no valueType)
       const newId = uuidv4();
       const [upsertResult] = await sequelize.query(
         `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt", "deletedAt")
-         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
+         (id, attribute_id, entity_type, entity_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt", "deletedAt")
+         VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
                  0, NOW(), NOW(), NULL)
-         ON CONFLICT ("entityType", "entityId", "attributeId") 
+         ON CONFLICT (entity_type, entity_id, attribute_id) 
          WHERE "deletedAt" IS NULL
          DO UPDATE SET
-           "valueString" = EXCLUDED."valueString",
-           "valueInteger" = EXCLUDED."valueInteger",
-           "valueDecimal" = EXCLUDED."valueDecimal",
-           "valueBoolean" = EXCLUDED."valueBoolean",
-           "valueDate" = EXCLUDED."valueDate",
-           "valueDatetime" = EXCLUDED."valueDatetime",
-           "valueText" = EXCLUDED."valueText",
-           "valueJson" = EXCLUDED."valueJson",
+           value_string = EXCLUDED.value_string,
+           value_integer = EXCLUDED.value_integer,
+           value_decimal = EXCLUDED.value_decimal,
+           value_boolean = EXCLUDED.value_boolean,
+           value_date = EXCLUDED.value_date,
+           value_datetime = EXCLUDED.value_datetime,
+           value_text = EXCLUDED.value_text,
+           value_json = EXCLUDED.value_json,
            "updatedAt" = NOW()
          RETURNING id, (xmax = 0) AS inserted`,
         {
           replacements: {
             id: newId,
-            attributeId: attrDef.id,
-            entityType: ENTITY_TYPE_NAME,
-            entityId: userId,
-            valueType: attrDef.valueType,
+            attribute_id: attrDef.id,
+            entity_type: ENTITY_TYPE_NAME,
+            entity_id: userId,
             ...valueColumns,
           },
           type: sequelize.QueryTypes.SELECT,
@@ -470,18 +470,18 @@ async function setUserProfileAttribute(userId, attributeName, value) {
 }
 
 /**
- * Prepare value columns based on type
+ * Prepare value columns based on type (snake_case for DB)
  */
 function prepareValueColumns(value, valueType) {
   const columns = {
-    valueString: null,
-    valueInteger: null,
-    valueDecimal: null,
-    valueBoolean: null,
-    valueDate: null,
-    valueDatetime: null,
-    valueText: null,
-    valueJson: null,
+    value_string: null,
+    value_integer: null,
+    value_decimal: null,
+    value_boolean: null,
+    value_date: null,
+    value_datetime: null,
+    value_text: null,
+    value_json: null,
   };
 
   if (value === null || value === undefined) {
@@ -490,31 +490,31 @@ function prepareValueColumns(value, valueType) {
 
   switch (valueType) {
     case 'string':
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
       break;
     case 'integer':
-      columns.valueInteger = parseInt(value, 10);
+      columns.value_integer = parseInt(value, 10);
       break;
     case 'decimal':
       columns.valueDecimal = parseFloat(value);
       break;
     case 'boolean':
-      columns.valueBoolean = Boolean(value);
+      columns.value_boolean = Boolean(value);
       break;
     case 'date':
-      columns.valueDate = value instanceof Date ? value : new Date(value);
+      columns.value_date = value instanceof Date ? value : new Date(value);
       break;
     case 'datetime':
-      columns.valueDatetime = value instanceof Date ? value : new Date(value);
+      columns.value_datetime = value instanceof Date ? value : new Date(value);
       break;
     case 'text':
-      columns.valueText = String(value);
+      columns.value_text = String(value);
       break;
     case 'json':
-      columns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+      columns.value_json = typeof value === 'string' ? value : JSON.stringify(value);
       break;
     default:
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
   }
 
   return columns;
@@ -696,16 +696,16 @@ async function deleteUserProfileAttribute(userId, attributeName) {
 
   try {
     if (useSpecificTable) {
-      // Delete from entity-specific table
+      // Delete from entity-specific table (snake_case)
       const result = await sequelize.query(
         `DELETE FROM user_attribute_values uav
          USING attribute_definitions ad, entity_types et
-         WHERE uav."attributeId" = ad.id
-           AND ad."entityTypeId" = et.id
-           AND uav."userId" = :userId
+         WHERE uav.attribute_id = ad.id
+           AND ad.entity_type_id = et.id
+           AND uav.user_id = :userId
            AND ad.name = :attributeName
            AND et.name = :entityTypeName
-         RETURNING uav."userId"`,
+         RETURNING uav.user_id`,
         {
           replacements: { 
             userId, 
@@ -718,15 +718,15 @@ async function deleteUserProfileAttribute(userId, attributeName) {
 
       return { success: true, deleted: result.length > 0 };
     } else {
-      // Soft delete from generic attribute_values table (legacy)
+      // Soft delete from generic attribute_values table (snake_case)
       const result = await sequelize.query(
         `UPDATE attribute_values av
          SET "deletedAt" = NOW()
          FROM attribute_definitions ad
-         JOIN entity_types et ON ad."entityTypeId" = et.id
-         WHERE av."attributeId" = ad.id
-           AND av."entityId" = :userId
-           AND av."entityType" = :entityType
+         JOIN entity_types et ON ad.entity_type_id = et.id
+         WHERE av.attribute_id = ad.id
+           AND av.entity_id = :userId
+           AND av.entity_type = :entityType
            AND ad.name = :attributeName
            AND et.name = :entityTypeName
            AND av."deletedAt" IS NULL
@@ -893,9 +893,9 @@ async function hasUserProfile(userId) {
     const [result] = await sequelize.query(
       `SELECT COUNT(*) as count
        FROM user_attribute_values uav
-       JOIN attribute_definitions ad ON uav."attributeId" = ad.id
-       JOIN entity_types et ON ad."entityTypeId" = et.id
-       WHERE uav."userId" = :userId
+       JOIN attribute_definitions ad ON uav.attribute_id = ad.id
+       JOIN entity_types et ON ad.entity_type_id = et.id
+       WHERE uav.user_id = :userId
          AND et.name = :entityTypeName`,
       {
         replacements: { 
@@ -910,10 +910,10 @@ async function hasUserProfile(userId) {
     const [result] = await sequelize.query(
       `SELECT COUNT(*) as count
        FROM attribute_values av
-       JOIN attribute_definitions ad ON av."attributeId" = ad.id
-       JOIN entity_types et ON ad."entityTypeId" = et.id
-       WHERE av."entityId" = :userId
-         AND av."entityType" = :entityType
+       JOIN attribute_definitions ad ON av.attribute_id = ad.id
+       JOIN entity_types et ON ad.entity_type_id = et.id
+       WHERE av.entity_id = :userId
+         AND av.entity_type = :entityType
          AND et.name = :entityTypeName
          AND av."deletedAt" IS NULL`,
       {

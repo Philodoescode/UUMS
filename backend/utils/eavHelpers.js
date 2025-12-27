@@ -7,6 +7,11 @@
  * - entity_types
  * 
  * Includes transaction support and audit logging for all operations.
+ * 
+ * Column Naming Convention:
+ * - Database uses snake_case (value_string, attribute_id, etc.)
+ * - JavaScript code uses camelCase for internal keys
+ * - Raw SQL queries use snake_case column names
  */
 
 const { sequelize } = require('../config/db');
@@ -16,6 +21,24 @@ const { v4: uuidv4 } = require('uuid');
 // Constants & Types
 // ============================================================================
 
+/**
+ * Maps value types to their snake_case database column names
+ */
+const VALUE_TYPE_DB_COLUMNS = {
+  string: 'value_string',
+  integer: 'value_integer',
+  decimal: 'value_decimal',
+  boolean: 'value_boolean',
+  date: 'value_date',
+  datetime: 'value_datetime',
+  text: 'value_text',
+  json: 'value_json',
+};
+
+/**
+ * Maps value types to camelCase keys for JavaScript objects
+ * @deprecated Use VALUE_TYPE_DB_COLUMNS for new code
+ */
 const VALUE_TYPE_COLUMNS = {
   string: 'valueString',
   integer: 'valueInteger',
@@ -32,9 +55,18 @@ const VALUE_TYPE_COLUMNS = {
 // ============================================================================
 
 /**
- * Get the appropriate column name for a value type
+ * Get the appropriate database column name for a value type (snake_case)
  * @param {string} valueType - The value type (string, integer, etc.)
- * @returns {string} Column name
+ * @returns {string} Database column name in snake_case
+ */
+function getValueDbColumn(valueType) {
+  return VALUE_TYPE_DB_COLUMNS[valueType] || 'value_string';
+}
+
+/**
+ * Get the appropriate camelCase column key for a value type
+ * @param {string} valueType - The value type (string, integer, etc.)
+ * @returns {string} Column name in camelCase
  */
 function getValueColumn(valueType) {
   return VALUE_TYPE_COLUMNS[valueType] || 'valueString';
@@ -42,12 +74,15 @@ function getValueColumn(valueType) {
 
 /**
  * Extract the value from an attribute value record based on its type
+ * Handles both snake_case (from raw SQL) and camelCase (from Sequelize) column names
  * @param {object} record - The attribute value record
  * @returns {any} The extracted value
  */
 function extractValue(record) {
-  const column = getValueColumn(record.valueType);
-  let value = record[column];
+  // Support both snake_case and camelCase column names
+  const snakeColumn = getValueDbColumn(record.valueType);
+  const camelColumn = getValueColumn(record.valueType);
+  let value = record[snakeColumn] !== undefined ? record[snakeColumn] : record[camelColumn];
   
   // Handle type conversions
   if (record.valueType === 'boolean' && value !== null) {
@@ -66,20 +101,21 @@ function extractValue(record) {
 
 /**
  * Prepare a value for storage in the appropriate column
+ * Returns object with snake_case keys for database operations
  * @param {any} value - The value to store
  * @param {string} valueType - The value type
- * @returns {object} Object with column values
+ * @returns {object} Object with snake_case column keys
  */
 function prepareValueColumns(value, valueType) {
   const columns = {
-    valueString: null,
-    valueInteger: null,
-    valueDecimal: null,
-    valueBoolean: null,
-    valueDate: null,
-    valueDatetime: null,
-    valueText: null,
-    valueJson: null,
+    value_string: null,
+    value_integer: null,
+    value_decimal: null,
+    value_boolean: null,
+    value_date: null,
+    value_datetime: null,
+    value_text: null,
+    value_json: null,
   };
 
   if (value === null || value === undefined) {
@@ -88,34 +124,55 @@ function prepareValueColumns(value, valueType) {
 
   switch (valueType) {
     case 'string':
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
       break;
     case 'integer':
-      columns.valueInteger = parseInt(value, 10);
+      columns.value_integer = parseInt(value, 10);
       break;
     case 'decimal':
-      columns.valueDecimal = parseFloat(value);
+      columns.value_decimal = parseFloat(value);
       break;
     case 'boolean':
-      columns.valueBoolean = Boolean(value);
+      columns.value_boolean = Boolean(value);
       break;
     case 'date':
-      columns.valueDate = value instanceof Date ? value : new Date(value);
+      columns.value_date = value instanceof Date ? value : new Date(value);
       break;
     case 'datetime':
-      columns.valueDatetime = value instanceof Date ? value : new Date(value);
+      columns.value_datetime = value instanceof Date ? value : new Date(value);
       break;
     case 'text':
-      columns.valueText = String(value);
+      columns.value_text = String(value);
       break;
     case 'json':
-      columns.valueJson = typeof value === 'string' ? value : JSON.stringify(value);
+      columns.value_json = typeof value === 'string' ? value : JSON.stringify(value);
       break;
     default:
-      columns.valueString = String(value).substring(0, 500);
+      columns.value_string = String(value).substring(0, 500);
   }
 
   return columns;
+}
+
+/**
+ * Prepare a value for storage - returns camelCase keys for Sequelize model compatibility
+ * @deprecated Use prepareValueColumns for new code with raw SQL
+ * @param {any} value - The value to store
+ * @param {string} valueType - The value type
+ * @returns {object} Object with camelCase column keys
+ */
+function prepareValueColumnsCamel(value, valueType) {
+  const snakeCase = prepareValueColumns(value, valueType);
+  return {
+    valueString: snakeCase.value_string,
+    valueInteger: snakeCase.value_integer,
+    valueDecimal: snakeCase.value_decimal,
+    valueBoolean: snakeCase.value_boolean,
+    valueDate: snakeCase.value_date,
+    valueDatetime: snakeCase.value_datetime,
+    valueText: snakeCase.value_text,
+    valueJson: snakeCase.value_json,
+  };
 }
 
 /**
@@ -212,8 +269,8 @@ async function getAttributes(entityType, entityId, options = {}) {
   const queryOptions = transaction ? { transaction, type: sequelize.QueryTypes.SELECT } : { type: sequelize.QueryTypes.SELECT };
 
   let whereClause = `
-    WHERE av."entityId" = :entityId
-      AND av."entityType" = :entityType
+    WHERE av.entity_id = :entityId
+      AND av.entity_type = :entityType
       AND av."deletedAt" IS NULL
       AND ad."deletedAt" IS NULL
   `;
@@ -234,31 +291,32 @@ async function getAttributes(entityType, entityId, options = {}) {
     replacements.attributeNames = attributeNames;
   }
 
+  // Note: valueType now comes from JOIN to attribute_definitions (ad."valueType")
   const values = await sequelize.query(
     `SELECT 
        av.id,
-       av."attributeId",
+       av.attribute_id as "attributeId",
        ad.name as "attributeName",
        ad."displayName",
        ad.description as "attributeDescription",
        ad."valueType",
        ad."isRequired",
        ad."isMultiValued",
-       av."valueString",
-       av."valueInteger",
-       av."valueDecimal",
-       av."valueBoolean",
-       av."valueDate",
-       av."valueDatetime",
-       av."valueText",
-       av."valueJson",
-       av."sortOrder",
+       av.value_string as "valueString",
+       av.value_integer as "valueInteger",
+       av.value_decimal as "valueDecimal",
+       av.value_boolean as "valueBoolean",
+       av.value_date as "valueDate",
+       av.value_datetime as "valueDatetime",
+       av.value_text as "valueText",
+       av.value_json as "valueJson",
+       av.sort_order as "sortOrder",
        av."createdAt",
        av."updatedAt"
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
      ${whereClause}
-     ORDER BY ad."sortOrder", av."sortOrder", av."createdAt"`,
+     ORDER BY ad."sortOrder", av.sort_order, av."createdAt"`,
     {
       replacements,
       ...queryOptions,
@@ -309,8 +367,8 @@ async function getAttributesWithMetadata(entityType, entityId, options = {}) {
   const queryOptions = transaction ? { transaction, type: sequelize.QueryTypes.SELECT } : { type: sequelize.QueryTypes.SELECT };
 
   let whereClause = `
-    WHERE av."entityId" = :entityId
-      AND av."entityType" = :entityType
+    WHERE av.entity_id = :entityId
+      AND av.entity_type = :entityType
       AND av."deletedAt" IS NULL
       AND ad."deletedAt" IS NULL
   `;
@@ -331,10 +389,11 @@ async function getAttributesWithMetadata(entityType, entityId, options = {}) {
     replacements.attributeNames = attributeNames;
   }
 
+  // Note: valueType now comes from JOIN to attribute_definitions
   const values = await sequelize.query(
     `SELECT 
        av.id as "valueId",
-       av."attributeId",
+       av.attribute_id as "attributeId",
        ad.name as "attributeName",
        ad."displayName",
        ad.description as "attributeDescription",
@@ -343,21 +402,21 @@ async function getAttributesWithMetadata(entityType, entityId, options = {}) {
        ad."isMultiValued",
        ad."validationRules",
        ad."defaultValue",
-       av."valueString",
-       av."valueInteger",
-       av."valueDecimal",
-       av."valueBoolean",
-       av."valueDate",
-       av."valueDatetime",
-       av."valueText",
-       av."valueJson",
-       av."sortOrder",
+       av.value_string as "valueString",
+       av.value_integer as "valueInteger",
+       av.value_decimal as "valueDecimal",
+       av.value_boolean as "valueBoolean",
+       av.value_date as "valueDate",
+       av.value_datetime as "valueDatetime",
+       av.value_text as "valueText",
+       av.value_json as "valueJson",
+       av.sort_order as "sortOrder",
        av."createdAt",
        av."updatedAt"
      FROM attribute_values av
-     JOIN attribute_definitions ad ON av."attributeId" = ad.id
+     JOIN attribute_definitions ad ON av.attribute_id = ad.id
      ${whereClause}
-     ORDER BY ad."sortOrder", av."sortOrder", av."createdAt"`,
+     ORDER BY ad."sortOrder", av.sort_order, av."createdAt"`,
     {
       replacements,
       ...queryOptions,
@@ -451,9 +510,9 @@ async function setAttribute(entityType, entityId, attributeName, value, options 
     if (!attrDef.isMultiValued) {
       [existingRecord] = await sequelize.query(
         `SELECT * FROM attribute_values 
-         WHERE "attributeId" = :attributeId 
-           AND "entityId" = :entityId 
-           AND "entityType" = :entityType
+         WHERE attribute_id = :attributeId 
+           AND entity_id = :entityId 
+           AND entity_type = :entityType
            AND "deletedAt" IS NULL`,
         {
           replacements: { 
@@ -471,7 +530,7 @@ async function setAttribute(entityType, entityId, attributeName, value, options 
       }
     }
 
-    // Prepare value columns
+    // Prepare value columns (snake_case for DB)
     const valueColumns = prepareValueColumns(value, attrDef.valueType);
     const valueId = uuidv4();
 
@@ -481,22 +540,22 @@ async function setAttribute(entityType, entityId, attributeName, value, options 
       // Update existing value
       await sequelize.query(
         `UPDATE attribute_values 
-         SET "valueString" = :valueString,
-             "valueInteger" = :valueInteger,
-             "valueDecimal" = :valueDecimal,
-             "valueBoolean" = :valueBoolean,
-             "valueDate" = :valueDate,
-             "valueDatetime" = :valueDatetime,
-             "valueText" = :valueText,
-             "valueJson" = :valueJson,
-             "sortOrder" = :sortOrder,
+         SET value_string = :value_string,
+             value_integer = :value_integer,
+             value_decimal = :value_decimal,
+             value_boolean = :value_boolean,
+             value_date = :value_date,
+             value_datetime = :value_datetime,
+             value_text = :value_text,
+             value_json = :value_json,
+             sort_order = :sort_order,
              "updatedAt" = NOW()
          WHERE id = :id`,
         {
           replacements: {
             id: existingRecord.id,
             ...valueColumns,
-            sortOrder,
+            sort_order: sortOrder,
           },
           transaction,
         }
@@ -519,26 +578,25 @@ async function setAttribute(entityType, entityId, attributeName, value, options 
         });
       }
     } else {
-      // Insert new value
+      // Insert new value (valueType removed - derived from attribute_definitions)
       await sequelize.query(
         `INSERT INTO attribute_values 
-         (id, "attributeId", "entityType", "entityId", "valueType",
-          "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-          "valueDate", "valueDatetime", "valueText", "valueJson",
-          "sortOrder", "createdAt", "updatedAt")
-         VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                 :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                 :valueDate, :valueDatetime, :valueText, :valueJson,
-                 :sortOrder, NOW(), NOW())`,
+         (id, attribute_id, entity_type, entity_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt")
+         VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
+                 :sort_order, NOW(), NOW())`,
         {
           replacements: {
             id: valueId,
-            attributeId: attrDef.id,
-            entityType,
-            entityId,
-            valueType: attrDef.valueType,
+            attribute_id: attrDef.id,
+            entity_type: entityType,
+            entity_id: entityId,
             ...valueColumns,
-            sortOrder,
+            sort_order: sortOrder,
           },
           transaction,
         }
@@ -650,12 +708,12 @@ async function bulkSetAttributes(entityType, entityId, attributes, options = {})
     let existingValuesMap = new Map();
     if (singleValuedAttrIds.length > 0) {
       const existingValues = await sequelize.query(
-        `SELECT av.*, ad.name as "attributeName"
+        `SELECT av.*, ad.name as "attributeName", ad."valueType"
          FROM attribute_values av
-         JOIN attribute_definitions ad ON av."attributeId" = ad.id
-         WHERE av."attributeId" IN (:attributeIds) 
-           AND av."entityId" = :entityId 
-           AND av."entityType" = :entityType
+         JOIN attribute_definitions ad ON av.attribute_id = ad.id
+         WHERE av.attribute_id IN (:attributeIds) 
+           AND av.entity_id = :entityId 
+           AND av.entity_type = :entityType
            AND av."deletedAt" IS NULL`,
         {
           replacements: { 
@@ -697,14 +755,14 @@ async function bulkSetAttributes(entityType, entityId, attributes, options = {})
         // Update existing value
         await sequelize.query(
           `UPDATE attribute_values 
-           SET "valueString" = :valueString,
-               "valueInteger" = :valueInteger,
-               "valueDecimal" = :valueDecimal,
-               "valueBoolean" = :valueBoolean,
-               "valueDate" = :valueDate,
-               "valueDatetime" = :valueDatetime,
-               "valueText" = :valueText,
-               "valueJson" = :valueJson,
+           SET value_string = :value_string,
+               value_integer = :value_integer,
+               value_decimal = :value_decimal,
+               value_boolean = :value_boolean,
+               value_date = :value_date,
+               value_datetime = :value_datetime,
+               value_text = :value_text,
+               value_json = :value_json,
                "updatedAt" = NOW()
            WHERE id = :id`,
           {
@@ -731,25 +789,24 @@ async function bulkSetAttributes(entityType, entityId, attributes, options = {})
           });
         }
       } else {
-        // Insert new value
+        // Insert new value (valueType removed - derived from attribute_definitions)
         const valueId = uuidv4();
         await sequelize.query(
           `INSERT INTO attribute_values 
-           (id, "attributeId", "entityType", "entityId", "valueType",
-            "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-            "valueDate", "valueDatetime", "valueText", "valueJson",
-            "sortOrder", "createdAt", "updatedAt")
-           VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                   :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                   :valueDate, :valueDatetime, :valueText, :valueJson,
+           (id, attribute_id, entity_type, entity_id,
+            value_string, value_integer, value_decimal, value_boolean,
+            value_date, value_datetime, value_text, value_json,
+            sort_order, "createdAt", "updatedAt")
+           VALUES (:id, :attribute_id, :entity_type, :entity_id,
+                   :value_string, :value_integer, :value_decimal, :value_boolean,
+                   :value_date, :value_datetime, :value_text, :value_json,
                    0, NOW(), NOW())`,
           {
             replacements: {
               id: valueId,
-              attributeId: attrDef.id,
-              entityType,
-              entityId,
-              valueType: attrDef.valueType,
+              attribute_id: attrDef.id,
+              entity_type: entityType,
+              entity_id: entityId,
               ...valueColumns,
             },
             transaction,
@@ -837,8 +894,8 @@ async function deleteAttribute(entityType, entityId, attributeName, options = {}
       throw new Error(`Attribute '${attributeName}' not found for entity type '${entityType}'`);
     }
 
-    // Build the WHERE clause
-    let whereClause = `"attributeId" = :attributeId AND "entityId" = :entityId AND "entityType" = :entityType`;
+    // Build the WHERE clause (snake_case columns)
+    let whereClause = `attribute_id = :attributeId AND entity_id = :entityId AND entity_type = :entityType`;
     const replacements = { attributeId: attrDef.id, entityId, entityType };
 
     if (valueId) {
@@ -1003,57 +1060,57 @@ async function findEntitiesByAttribute(entityType, attributeName, value, options
     throw new Error(`Attribute '${attributeName}' not found for entity type '${entityType}'`);
   }
 
-  const valueColumn = getValueColumn(attrDef.valueType);
+  const valueColumn = getValueDbColumn(attrDef.valueType);  // Use snake_case DB column
   const replacements = { entityType, attributeId: attrDef.id, limit, offset };
 
-  // Build comparison clause
+  // Build comparison clause (using snake_case columns)
   let comparison;
   switch (operator) {
     case 'eq':
-      comparison = `"${valueColumn}" = :value`;
+      comparison = `${valueColumn} = :value`;
       replacements.value = value;
       break;
     case 'ne':
-      comparison = `"${valueColumn}" != :value`;
+      comparison = `${valueColumn} != :value`;
       replacements.value = value;
       break;
     case 'gt':
-      comparison = `"${valueColumn}" > :value`;
+      comparison = `${valueColumn} > :value`;
       replacements.value = value;
       break;
     case 'lt':
-      comparison = `"${valueColumn}" < :value`;
+      comparison = `${valueColumn} < :value`;
       replacements.value = value;
       break;
     case 'gte':
-      comparison = `"${valueColumn}" >= :value`;
+      comparison = `${valueColumn} >= :value`;
       replacements.value = value;
       break;
     case 'lte':
-      comparison = `"${valueColumn}" <= :value`;
+      comparison = `${valueColumn} <= :value`;
       replacements.value = value;
       break;
     case 'like':
-      comparison = `"${valueColumn}" LIKE :value`;
+      comparison = `${valueColumn} LIKE :value`;
       replacements.value = `%${value}%`;
       break;
     case 'in':
-      comparison = `"${valueColumn}" IN (:value)`;
+      comparison = `${valueColumn} IN (:value)`;
       replacements.value = Array.isArray(value) ? value : [value];
       break;
     default:
-      comparison = `"${valueColumn}" = :value`;
+      comparison = `${valueColumn} = :value`;
       replacements.value = value;
   }
 
   const results = await sequelize.query(
-    `SELECT DISTINCT "entityId"
+    `SELECT DISTINCT entity_id as "entityId"
      FROM attribute_values
-     WHERE "entityType" = :entityType
-       AND "attributeId" = :attributeId
+     WHERE entity_type = :entityType
+       AND attribute_id = :attributeId
        AND ${comparison}
        AND "deletedAt" IS NULL
-     ORDER BY "entityId"
+     ORDER BY entity_id
      LIMIT :limit OFFSET :offset`,
     {
       replacements,
@@ -1175,6 +1232,9 @@ module.exports = {
   // Helper utilities
   extractValue,
   prepareValueColumns,
+  prepareValueColumnsCamel,  // Legacy compatibility
   getValueColumn,
-  VALUE_TYPE_COLUMNS,
+  getValueDbColumn,           // New snake_case column names
+  VALUE_TYPE_COLUMNS,         // camelCase mapping
+  VALUE_TYPE_DB_COLUMNS,      // snake_case mapping
 };
