@@ -40,7 +40,8 @@ const sendMessage = async (req, res) => {
 
     // 4.5 Parent-Teacher Validation
     // If sender is a parent, recipient must be a teacher of one of their children
-    if (req.user.role && req.user.role.name.toLowerCase() === 'parent') {
+    const isParent = req.user.roles && req.user.roles.some(r => r.name.toLowerCase() === 'parent');
+    if (isParent) {
       const authorized = await User.count({
         where: { id: senderId },
         include: [{

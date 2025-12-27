@@ -25,7 +25,7 @@ interface User {
     id: string;
     fullName: string;
     email: string;
-    role: { name: string };
+    roles: { name: string }[];
     advisor?: { id: string; fullName: string };
 }
 
@@ -52,8 +52,8 @@ const StudentManagement = () => {
             // Let's assume we need to update/verify the backend endpoint for /users first. 
             // Attempting to filter client-side for safety if backend dumps all.
             const allUsers = (await api.get('/users')).data;
-            setStudents(allUsers.filter((u: User) => u.role.name === 'student'));
-            setAdvisors(allUsers.filter((u: User) => u.role.name === 'advisor'));
+            setStudents(allUsers.filter((u: User) => u.roles?.some(r => r.name === 'student')));
+            setAdvisors(allUsers.filter((u: User) => u.roles?.some(r => r.name === 'advisor')));
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {

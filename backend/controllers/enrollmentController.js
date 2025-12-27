@@ -22,7 +22,8 @@ const approveEnrollment = async (req, res) => {
     }
 
     // Check if current user is the student's advisor
-    if (enrollment.student.advisorId !== advisorId && req.user.role.name !== 'admin') {
+    const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
+    if (enrollment.student.advisorId !== advisorId && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized to approve this enrollment' });
     }
 
@@ -132,7 +133,8 @@ const getAllEnrollments = async (req, res) => {
 
     // Special logic for Advisor: restrict to assigned students
     const user = req.user; // populated by protect middleware
-    if (user.role.name === 'advisor') {
+    const isAdvisor = user.roles && user.roles.some(r => r.name === 'advisor');
+    if (isAdvisor) {
       // This is tricky without a join on the where clause for the include.
       // Sequelize allows this.
     }
@@ -146,7 +148,7 @@ const getAllEnrollments = async (req, res) => {
       }
     ];
 
-    if (user.role.name === 'advisor') {
+    if (isAdvisor) {
       includeOptions[0].where = { advisorId: user.id };
     }
 

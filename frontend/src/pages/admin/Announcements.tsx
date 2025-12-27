@@ -17,9 +17,9 @@ interface Announcement {
   creator: {
     fullName: string;
     email: string;
-    role: {
+    roles: {
       name: string;
-    };
+    }[];
   };
 }
 
@@ -163,7 +163,7 @@ export default function AnnouncementsPage() {
                         📅 {format(new Date(announcement.date), "MMM dd, yyyy")}
                       </span>
                       <span>
-                        👤 {announcement.creator.fullName} ({announcement.creator.role.name})
+                        👤 {announcement.creator.fullName} ({announcement.creator.roles?.map(r => r.name).join(', ') || 'No Role'})
                       </span>
                       <span>
                         🕐 Published {format(new Date(announcement.publishedAt), "MMM dd, yyyy 'at' hh:mm a")}

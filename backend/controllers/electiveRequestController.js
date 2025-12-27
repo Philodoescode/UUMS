@@ -103,7 +103,9 @@ const updateRequest = async (req, res) => {
         const advisorId = req.user.id;
 
         // Verify Advisor Role
-        if (req.user.role.name !== 'advisor' && req.user.role.name !== 'admin') {
+        const isAdvisor = req.user.roles && req.user.roles.some(r => r.name === 'advisor');
+        const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
+        if (!isAdvisor && !isAdmin) {
             return res.status(403).json({ message: 'Not authorized to approve/reject requests' });
         }
 

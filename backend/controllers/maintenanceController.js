@@ -31,11 +31,7 @@ const getRequests = async (req, res) => {
         const where = {};
 
         // If not admin, only show own requests
-        const isAdmin =
-            req.user &&
-            req.user.role &&
-            (req.user.role === 'admin' ||
-                (typeof req.user.role === 'object' && req.user.role.name === 'admin'));
+        const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
 
         if (!isAdmin) {
             where.reportedById = req.user.id;

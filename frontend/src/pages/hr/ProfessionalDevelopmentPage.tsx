@@ -20,9 +20,9 @@ interface Employee {
     id: string;
     fullName: string;
     email: string;
-    role: {
+    roles: {
         name: string;
-    };
+    }[];
     department?: {
         name: string;
     };
@@ -107,7 +107,7 @@ const ProfessionalDevelopmentPage = () => {
                                                     <div className="text-xs text-muted-foreground truncate">{emp.email}</div>
                                                     <div className="mt-1 flex items-center gap-2">
                                                         <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
-                                                            {emp.role.name.toUpperCase()}
+                                                            {emp.roles?.map(r => r.name.toUpperCase()).join(', ') || 'NO ROLE'}
                                                         </Badge>
                                                         {emp.department && (
                                                             <span className="text-xs text-muted-foreground truncate">

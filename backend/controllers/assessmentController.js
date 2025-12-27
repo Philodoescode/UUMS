@@ -9,7 +9,9 @@ const createAssessment = async (req, res) => {
         const { courseId, title, description, accessCode, timeLimit, attemptsAllowed, dueDate, startDate, questions, type, latePolicy, latePenalty, closeDate } = req.body;
 
         // Check if user is instructor for the course (or admin)
-        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'admin') {
+        const isInstructor = req.user.roles && req.user.roles.some(r => r.name === 'instructor');
+        const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
+        if (!isInstructor && !isAdmin) {
             return res.status(403).json({ message: 'Not authorized to create assessments' });
         }
 
@@ -53,7 +55,8 @@ const getAssessmentsByCourse = async (req, res) => {
 
         // 1. Enrollment Check (Security)
         // If student, must be enrolled.
-        if (req.user.role.name === 'student') {
+        const isStudent = req.user.roles && req.user.roles.some(r => r.name === 'student');
+        if (isStudent) {
             const enrollment = await Enrollment.findOne({
                 where: {
                     userId,
@@ -68,7 +71,7 @@ const getAssessmentsByCourse = async (req, res) => {
         }
 
         let attributes = {};
-        if (req.user.role.name === 'student') {
+        if (isStudent) {
             attributes = { exclude: ['accessCode'] };
         }
 
