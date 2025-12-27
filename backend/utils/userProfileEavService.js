@@ -13,12 +13,10 @@
  * - Staff/HR: employee_id, position_title, hire_date, manager, etc.
  * - Common: preferred_name, pronouns, phone_number, address fields, etc.
  * 
- * === Entity-Specific Table Support ===
- * This service now supports both the generic attribute_values table and
- * the entity-specific user_attribute_values table. The feature flag
- * `useEntitySpecificTable` on the EntityType determines which is used.
+ * === Entity-Specific Table ===
+ * This service uses the entity-specific user_attribute_values table exclusively.
  * 
- * Benefits of entity-specific table:
+ * Benefits:
  * - Proper foreign key constraints with CASCADE delete
  * - Better query performance (direct join vs polymorphic lookup)
  * - Database-enforced referential integrity
@@ -45,7 +43,7 @@ let entityTypeCacheTimestamp = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get the User entity type configuration, including feature flags
+ * Get the User entity type configuration
  * @returns {Promise<object|null>} Entity type config or null
  */
 async function getEntityTypeConfig() {
@@ -56,7 +54,7 @@ async function getEntityTypeConfig() {
   }
   
   const [config] = await sequelize.query(
-    `SELECT id, name, "tableName", "useEntitySpecificTable"
+    `SELECT id, name, "tableName"
      FROM entity_types 
      WHERE name = :name AND "deletedAt" IS NULL`,
     {
@@ -80,15 +78,6 @@ function clearCache() {
 }
 
 /**
- * Check if entity-specific table should be used
- * @returns {Promise<boolean>}
- */
-async function shouldUseEntitySpecificTable() {
-  const config = await getEntityTypeConfig();
-  return config?.useEntitySpecificTable === true;
-}
-
-/**
  * Get all profile attributes for a user
  * @param {string} userId - The user's UUID
  * @param {object} options - Query options
@@ -98,40 +87,19 @@ async function shouldUseEntitySpecificTable() {
  */
 async function getUserProfile(userId, options = {}) {
   const { category = null, attributeNames = null } = options;
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
-  let whereClause;
-  let fromClause;
   const replacements = { userId };
 
-  if (useSpecificTable) {
-    // Use entity-specific user_attribute_values table (snake_case columns)
-    fromClause = `
-      FROM user_attribute_values uav
-      JOIN attribute_definitions ad ON uav.attribute_id = ad.id
-      JOIN entity_types et ON ad."entityTypeId" = et.id
-    `;
-    whereClause = `
-      WHERE uav.user_id = :userId
-        AND ad."deletedAt" IS NULL
-        AND ad."isActive" = true
-    `;
-  } else {
-    // Use generic attribute_values table (snake_case columns)
-    fromClause = `
-      FROM attribute_values av
-      JOIN attribute_definitions ad ON av.attribute_id = ad.id
-      JOIN entity_types et ON ad."entityTypeId" = et.id
-    `;
-    whereClause = `
-      WHERE av.entity_id = :userId
-        AND av.entity_type = :entityType
-        AND av."deletedAt" IS NULL
-        AND ad."deletedAt" IS NULL
-        AND ad."isActive" = true
-    `;
-    replacements.entityType = ENTITY_TYPE_NAME;
-  }
+  // Always use entity-specific user_attribute_values table (snake_case columns)
+  const fromClause = `
+    FROM user_attribute_values uav
+    JOIN attribute_definitions ad ON uav.attribute_id = ad.id
+    JOIN entity_types et ON ad."entityTypeId" = et.id
+  `;
+  let whereClause = `
+    WHERE uav.user_id = :userId
+      AND ad."deletedAt" IS NULL
+      AND ad."isActive" = true
+  `;
 
   if (category) {
     whereClause += ` AND ad.name LIKE :categoryPrefix`;
@@ -143,15 +111,10 @@ async function getUserProfile(userId, options = {}) {
     replacements.attributeNames = attributeNames;
   }
 
-  // Build SELECT columns based on table source (snake_case in DB, aliased to camelCase)
-  // Note: valueType now comes from attribute_definitions JOIN
-  const valueColumns = useSpecificTable 
-    ? `uav.attribute_id as "attributeId", uav.value_string as "valueString", uav.value_integer as "valueInteger", uav.value_decimal as "valueDecimal", 
-       uav.value_boolean as "valueBoolean", uav.value_date as "valueDate", uav.value_datetime as "valueDatetime", uav.value_text as "valueText", 
-       uav.value_json as "valueJson", uav.sort_order as "sortOrder"`
-    : `av.id, av.attribute_id as "attributeId", av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
-       av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", av.value_text as "valueText", 
-       av.value_json as "valueJson", av.sort_order as "sortOrder"`;
+  // Build SELECT columns (snake_case in DB, aliased to camelCase)
+  const valueColumns = `uav.attribute_id as "attributeId", uav.value_string as "valueString", uav.value_integer as "valueInteger", uav.value_decimal as "valueDecimal", 
+     uav.value_boolean as "valueBoolean", uav.value_date as "valueDate", uav.value_datetime as "valueDatetime", uav.value_text as "valueText", 
+     uav.value_json as "valueJson", uav.sort_order as "sortOrder"`;
 
   const values = await sequelize.query(
     `SELECT 
@@ -162,7 +125,7 @@ async function getUserProfile(userId, options = {}) {
        ad."valueType"
      ${fromClause}
      ${whereClause}
-     ORDER BY ad."sortOrder", ${useSpecificTable ? 'uav' : 'av'}.sort_order`,
+     ORDER BY ad."sortOrder", uav.sort_order`,
     {
       replacements,
       type: sequelize.QueryTypes.SELECT,
@@ -196,72 +159,49 @@ async function getUserProfile(userId, options = {}) {
  */
 async function getUserProfileWithDetails(userId, options = {}) {
   const { category = null } = options;
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
-  let whereClause;
-  let fromClause;
   const replacements = { userId };
 
-  if (useSpecificTable) {
-    fromClause = `
-      FROM user_attribute_values uav
-      JOIN attribute_definitions ad ON uav.attribute_id = ad.id
-      JOIN entity_types et ON ad."entityTypeId" = et.id
-    `;
-    whereClause = `
-      WHERE uav.user_id = :userId
-        AND ad."deletedAt" IS NULL
-    `;
-  } else {
-    fromClause = `
-      FROM attribute_values av
-      JOIN attribute_definitions ad ON av.attribute_id = ad.id
-      JOIN entity_types et ON ad."entityTypeId" = et.id
-    `;
-    whereClause = `
-      WHERE av.entity_id = :userId
-        AND av.entity_type = :entityType
-        AND av."deletedAt" IS NULL
-        AND ad."deletedAt" IS NULL
-    `;
-    replacements.entityType = ENTITY_TYPE_NAME;
-  }
+  const fromClause = `
+    FROM user_attribute_values uav
+    JOIN attribute_definitions ad ON uav.attribute_id = ad.id
+    JOIN entity_types et ON ad."entityTypeId" = et.id
+  `;
+  let whereClause = `
+    WHERE uav.user_id = :userId
+      AND ad."deletedAt" IS NULL
+  `;
 
   if (category) {
     whereClause += ` AND ad.name LIKE :categoryPrefix`;
     replacements.categoryPrefix = `${category}_%`;
   }
 
-  const valueAlias = useSpecificTable ? 'uav' : 'av';
-  const idColumn = useSpecificTable 
-    ? `CONCAT(uav.user_id, '-', uav.attribute_id) as value_id`
-    : `${valueAlias}.id as value_id`;
+  const idColumn = `CONCAT(uav.user_id, '-', uav.attribute_id) as value_id`;
 
-  // Note: valueType now comes from attribute_definitions JOIN
   const values = await sequelize.query(
     `SELECT 
        ${idColumn},
-       ${valueAlias}.attribute_id as "attributeId",
+       uav.attribute_id as "attributeId",
        ad.name as attribute_name,
        ad."displayName" as display_name,
        ad.description,
        ad."valueType",
        ad."isRequired",
        ad."validationRules",
-       ${valueAlias}.value_string as "valueString",
-       ${valueAlias}.value_integer as "valueInteger",
-       ${valueAlias}.value_decimal as "valueDecimal",
-       ${valueAlias}.value_boolean as "valueBoolean",
-       ${valueAlias}.value_date as "valueDate",
-       ${valueAlias}.value_datetime as "valueDatetime",
-       ${valueAlias}.value_text as "valueText",
-       ${valueAlias}.value_json as "valueJson",
-       ${valueAlias}.sort_order as "sortOrder",
-       ${valueAlias}."createdAt",
-       ${valueAlias}."updatedAt"
+       uav.value_string as "valueString",
+       uav.value_integer as "valueInteger",
+       uav.value_decimal as "valueDecimal",
+       uav.value_boolean as "valueBoolean",
+       uav.value_date as "valueDate",
+       uav.value_datetime as "valueDatetime",
+       uav.value_text as "valueText",
+       uav.value_json as "valueJson",
+       uav.sort_order as "sortOrder",
+       uav."createdAt",
+       uav."updatedAt"
      ${fromClause}
      ${whereClause}
-     ORDER BY ad."sortOrder", ${valueAlias}.sort_order`,
+     ORDER BY ad."sortOrder", uav.sort_order`,
     {
       replacements,
       type: sequelize.QueryTypes.SELECT,
@@ -327,7 +267,6 @@ function extractValue(record) {
  */
 async function setUserProfileAttribute(userId, attributeName, value) {
   const transaction = await sequelize.transaction();
-  const useSpecificTable = await shouldUseEntitySpecificTable();
 
   try {
     // Get entity type
@@ -359,88 +298,43 @@ async function setUserProfileAttribute(userId, attributeName, value) {
 
     // Prepare value columns (snake_case for DB)
     const valueColumns = prepareValueColumns(value, attrDef.valueType);
-    let resultId;
-    let wasInserted;
 
-    if (useSpecificTable) {
-      // Use entity-specific user_attribute_values table (snake_case columns, no valueType)
-      const [upsertResult] = await sequelize.query(
-        `INSERT INTO user_attribute_values 
-         (user_id, attribute_id,
-          value_string, value_integer, value_decimal, value_boolean,
-          value_date, value_datetime, value_text, value_json,
-          sort_order, "createdAt", "updatedAt")
-         VALUES (:user_id, :attribute_id,
-                 :value_string, :value_integer, :value_decimal, :value_boolean,
-                 :value_date, :value_datetime, :value_text, :value_json,
-                 0, NOW(), NOW())
-         ON CONFLICT (user_id, attribute_id) 
-         DO UPDATE SET
-           value_string = EXCLUDED.value_string,
-           value_integer = EXCLUDED.value_integer,
-           value_decimal = EXCLUDED.value_decimal,
-           value_boolean = EXCLUDED.value_boolean,
-           value_date = EXCLUDED.value_date,
-           value_datetime = EXCLUDED.value_datetime,
-           value_text = EXCLUDED.value_text,
-           value_json = EXCLUDED.value_json,
-           "updatedAt" = NOW()
-         RETURNING user_id, attribute_id, (xmax = 0) AS inserted`,
-        {
-          replacements: {
-            user_id: userId,
-            attribute_id: attrDef.id,
-            ...valueColumns,
-          },
-          type: sequelize.QueryTypes.SELECT,
-          transaction,
-        }
-      );
+    // Use entity-specific user_attribute_values table (snake_case columns)
+    const [upsertResult] = await sequelize.query(
+      `INSERT INTO user_attribute_values 
+       (user_id, attribute_id,
+        value_string, value_integer, value_decimal, value_boolean,
+        value_date, value_datetime, value_text, value_json,
+        sort_order, "createdAt", "updatedAt")
+       VALUES (:user_id, :attribute_id,
+               :value_string, :value_integer, :value_decimal, :value_boolean,
+               :value_date, :value_datetime, :value_text, :value_json,
+               0, NOW(), NOW())
+       ON CONFLICT (user_id, attribute_id) 
+       DO UPDATE SET
+         value_string = EXCLUDED.value_string,
+         value_integer = EXCLUDED.value_integer,
+         value_decimal = EXCLUDED.value_decimal,
+         value_boolean = EXCLUDED.value_boolean,
+         value_date = EXCLUDED.value_date,
+         value_datetime = EXCLUDED.value_datetime,
+         value_text = EXCLUDED.value_text,
+         value_json = EXCLUDED.value_json,
+         "updatedAt" = NOW()
+       RETURNING user_id, attribute_id, (xmax = 0) AS inserted`,
+      {
+        replacements: {
+          user_id: userId,
+          attribute_id: attrDef.id,
+          ...valueColumns,
+        },
+        type: sequelize.QueryTypes.SELECT,
+        transaction,
+      }
+    );
 
-      resultId = `${userId}-${attrDef.id}`;
-      wasInserted = upsertResult?.inserted === true;
-    } else {
-      // Use generic attribute_values table (snake_case columns, no valueType)
-      const newId = uuidv4();
-      const [upsertResult] = await sequelize.query(
-        `INSERT INTO attribute_values 
-         (id, attribute_id, entity_type, entity_id,
-          value_string, value_integer, value_decimal, value_boolean,
-          value_date, value_datetime, value_text, value_json,
-          sort_order, "createdAt", "updatedAt", "deletedAt")
-         VALUES (:id, :attribute_id, :entity_type, :entity_id,
-                 :value_string, :value_integer, :value_decimal, :value_boolean,
-                 :value_date, :value_datetime, :value_text, :value_json,
-                 0, NOW(), NOW(), NULL)
-         ON CONFLICT (entity_type, entity_id, attribute_id) 
-         WHERE "deletedAt" IS NULL
-         DO UPDATE SET
-           value_string = EXCLUDED.value_string,
-           value_integer = EXCLUDED.value_integer,
-           value_decimal = EXCLUDED.value_decimal,
-           value_boolean = EXCLUDED.value_boolean,
-           value_date = EXCLUDED.value_date,
-           value_datetime = EXCLUDED.value_datetime,
-           value_text = EXCLUDED.value_text,
-           value_json = EXCLUDED.value_json,
-           "updatedAt" = NOW()
-         RETURNING id, (xmax = 0) AS inserted`,
-        {
-          replacements: {
-            id: newId,
-            attribute_id: attrDef.id,
-            entity_type: ENTITY_TYPE_NAME,
-            entity_id: userId,
-            ...valueColumns,
-          },
-          type: sequelize.QueryTypes.SELECT,
-          transaction,
-        }
-      );
-
-      resultId = upsertResult?.id || newId;
-      wasInserted = upsertResult?.inserted === true;
-    }
+    const resultId = `${userId}-${attrDef.id}`;
+    const wasInserted = upsertResult?.inserted === true;
 
     // Mark user as having EAV profile
     await sequelize.query(
@@ -496,7 +390,7 @@ function prepareValueColumns(value, valueType) {
       columns.value_integer = parseInt(value, 10);
       break;
     case 'decimal':
-      columns.valueDecimal = parseFloat(value);
+      columns.value_decimal = parseFloat(value);
       break;
     case 'boolean':
       columns.value_boolean = Boolean(value);
@@ -537,7 +431,6 @@ async function bulkSetUserProfile(userId, attributes) {
   }
 
   const transaction = await sequelize.transaction();
-  const useSpecificTable = await shouldUseEntitySpecificTable();
 
   try {
     // Get entity type
@@ -581,91 +474,45 @@ async function bulkSetUserProfile(userId, attributes) {
 
       const valueColumns = prepareValueColumns(value, attrDef.valueType);
 
-      if (useSpecificTable) {
-        // Use entity-specific user_attribute_values table
-        const [upsertResult] = await sequelize.query(
-          `INSERT INTO user_attribute_values 
-           ("userId", "attributeId", "valueType",
-            "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-            "valueDate", "valueDatetime", "valueText", "valueJson",
-            "sortOrder", "createdAt", "updatedAt")
-           VALUES (:userId, :attributeId, :valueType,
-                   :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                   :valueDate, :valueDatetime, :valueText, :valueJson,
-                   0, NOW(), NOW())
-           ON CONFLICT ("userId", "attributeId") 
-           DO UPDATE SET
-             "valueString" = EXCLUDED."valueString",
-             "valueInteger" = EXCLUDED."valueInteger",
-             "valueDecimal" = EXCLUDED."valueDecimal",
-             "valueBoolean" = EXCLUDED."valueBoolean",
-             "valueDate" = EXCLUDED."valueDate",
-             "valueDatetime" = EXCLUDED."valueDatetime",
-             "valueText" = EXCLUDED."valueText",
-             "valueJson" = EXCLUDED."valueJson",
-             "updatedAt" = NOW()
-           RETURNING (xmax = 0) AS inserted`,
-          {
-            replacements: {
-              userId,
-              attributeId: attrDef.id,
-              valueType: attrDef.valueType,
-              ...valueColumns,
-            },
-            type: sequelize.QueryTypes.SELECT,
-            transaction,
-          }
-        );
+      // Use entity-specific user_attribute_values table
+      const [upsertResult] = await sequelize.query(
+        `INSERT INTO user_attribute_values 
+         (user_id, attribute_id,
+          value_string, value_integer, value_decimal, value_boolean,
+          value_date, value_datetime, value_text, value_json,
+          sort_order, "createdAt", "updatedAt")
+         VALUES (:user_id, :attribute_id,
+                 :value_string, :value_integer, :value_decimal, :value_boolean,
+                 :value_date, :value_datetime, :value_text, :value_json,
+                 0, NOW(), NOW())
+         ON CONFLICT (user_id, attribute_id) 
+         DO UPDATE SET
+           value_string = EXCLUDED.value_string,
+           value_integer = EXCLUDED.value_integer,
+           value_decimal = EXCLUDED.value_decimal,
+           value_boolean = EXCLUDED.value_boolean,
+           value_date = EXCLUDED.value_date,
+           value_datetime = EXCLUDED.value_datetime,
+           value_text = EXCLUDED.value_text,
+           value_json = EXCLUDED.value_json,
+           "updatedAt" = NOW()
+         RETURNING (xmax = 0) AS inserted`,
+        {
+          replacements: {
+            user_id: userId,
+            attribute_id: attrDef.id,
+            ...valueColumns,
+          },
+          type: sequelize.QueryTypes.SELECT,
+          transaction,
+        }
+      );
 
-        const wasInserted = upsertResult?.inserted === true;
-        results[attributeName] = { 
-          id: `${userId}-${attrDef.id}`, 
-          action: wasInserted ? 'created' : 'updated' 
-        };
-      } else {
-        // Use generic attribute_values table (legacy)
-        const newId = uuidv4();
-        const [upsertResult] = await sequelize.query(
-          `INSERT INTO attribute_values 
-           (id, "attributeId", "entityType", "entityId", "valueType",
-            "valueString", "valueInteger", "valueDecimal", "valueBoolean",
-            "valueDate", "valueDatetime", "valueText", "valueJson",
-            "sortOrder", "createdAt", "updatedAt", "deletedAt")
-           VALUES (:id, :attributeId, :entityType, :entityId, :valueType,
-                   :valueString, :valueInteger, :valueDecimal, :valueBoolean,
-                   :valueDate, :valueDatetime, :valueText, :valueJson,
-                   0, NOW(), NOW(), NULL)
-           ON CONFLICT ("entityType", "entityId", "attributeId") 
-           WHERE "deletedAt" IS NULL
-           DO UPDATE SET
-             "valueString" = EXCLUDED."valueString",
-             "valueInteger" = EXCLUDED."valueInteger",
-             "valueDecimal" = EXCLUDED."valueDecimal",
-             "valueBoolean" = EXCLUDED."valueBoolean",
-             "valueDate" = EXCLUDED."valueDate",
-             "valueDatetime" = EXCLUDED."valueDatetime",
-             "valueText" = EXCLUDED."valueText",
-             "valueJson" = EXCLUDED."valueJson",
-             "updatedAt" = NOW()
-           RETURNING id, (xmax = 0) AS inserted`,
-          {
-            replacements: {
-              id: newId,
-              attributeId: attrDef.id,
-              entityType: ENTITY_TYPE_NAME,
-              entityId: userId,
-              valueType: attrDef.valueType,
-              ...valueColumns,
-            },
-            type: sequelize.QueryTypes.SELECT,
-            transaction,
-          }
-        );
-
-        const resultId = upsertResult?.id || newId;
-        const wasInserted = upsertResult?.inserted === true;
-        results[attributeName] = { id: resultId, action: wasInserted ? 'created' : 'updated' };
-      }
+      const wasInserted = upsertResult?.inserted === true;
+      results[attributeName] = { 
+        id: `${userId}-${attrDef.id}`, 
+        action: wasInserted ? 'created' : 'updated' 
+      };
     }
 
     // Mark user as having EAV profile
@@ -692,58 +539,28 @@ async function bulkSetUserProfile(userId, attributes) {
  * @returns {Promise<object>} Result with success flag
  */
 async function deleteUserProfileAttribute(userId, attributeName) {
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
   try {
-    if (useSpecificTable) {
-      // Delete from entity-specific table (snake_case)
-      const result = await sequelize.query(
-        `DELETE FROM user_attribute_values uav
-         USING attribute_definitions ad, entity_types et
-         WHERE uav.attribute_id = ad.id
-           AND ad.entity_type_id = et.id
-           AND uav.user_id = :userId
-           AND ad.name = :attributeName
-           AND et.name = :entityTypeName
-         RETURNING uav.user_id`,
-        {
-          replacements: { 
-            userId, 
-            attributeName,
-            entityTypeName: ENTITY_TYPE_NAME,
-          },
-          type: sequelize.QueryTypes.SELECT,
-        }
-      );
+    // Delete from entity-specific table (snake_case)
+    const result = await sequelize.query(
+      `DELETE FROM user_attribute_values uav
+       USING attribute_definitions ad, entity_types et
+       WHERE uav.attribute_id = ad.id
+         AND ad."entityTypeId" = et.id
+         AND uav.user_id = :userId
+         AND ad.name = :attributeName
+         AND et.name = :entityTypeName
+       RETURNING uav.user_id`,
+      {
+        replacements: { 
+          userId, 
+          attributeName,
+          entityTypeName: ENTITY_TYPE_NAME,
+        },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
 
-      return { success: true, deleted: result.length > 0 };
-    } else {
-      // Soft delete from generic attribute_values table (snake_case)
-      const result = await sequelize.query(
-        `UPDATE attribute_values av
-         SET "deletedAt" = NOW()
-         FROM attribute_definitions ad
-         JOIN entity_types et ON ad.entity_type_id = et.id
-         WHERE av.attribute_id = ad.id
-           AND av.entity_id = :userId
-           AND av.entity_type = :entityType
-           AND ad.name = :attributeName
-           AND et.name = :entityTypeName
-           AND av."deletedAt" IS NULL
-         RETURNING av.id`,
-        {
-          replacements: { 
-            userId, 
-            entityType: ENTITY_TYPE_NAME,
-            attributeName,
-            entityTypeName: ENTITY_TYPE_NAME,
-          },
-          type: sequelize.QueryTypes.SELECT,
-        }
-      );
-
-      return { success: true, deleted: result.length > 0 };
-    }
+    return { success: true, deleted: result.length > 0 };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -803,7 +620,6 @@ async function getAvailableProfileAttributes(roleCategory = null) {
       defaultValue: a.defaultValue,
       validationRules: a.validationRules,
       sortOrder: a.sortOrder,
-      category: a.name.split('_')[0], // Extract category from name prefix
     }));
 
     return { success: true, data };
@@ -819,27 +635,14 @@ async function getAvailableProfileAttributes(roleCategory = null) {
  * @returns {Promise<object>} Result with success flag and data
  */
 async function getUserProfileByCategory(userId, category) {
-  try {
-    const profileResult = await getUserProfile(userId, { category });
-    
-    if (!profileResult.success) {
-      return profileResult;
-    }
-
-    // Filter to only include attributes from the specified category
-    const filtered = {};
-    const categoryPrefix = category.charAt(0).toUpperCase() + category.slice(1);
-    
-    for (const [key, value] of Object.entries(profileResult.data)) {
-      if (key.startsWith(category) || key.startsWith(categoryPrefix)) {
-        filtered[key] = value;
-      }
-    }
-
-    return { success: true, data: filtered };
-  } catch (error) {
-    return { success: false, error: error.message };
+  if (!Object.values(ATTRIBUTE_CATEGORIES).includes(category)) {
+    return { 
+      success: false, 
+      error: `Invalid category. Must be one of: ${Object.values(ATTRIBUTE_CATEGORIES).join(', ')}` 
+    };
   }
+
+  return getUserProfile(userId, { category });
 }
 
 /**
@@ -848,37 +651,30 @@ async function getUserProfileByCategory(userId, category) {
  * @returns {Promise<object>} Object with categories as keys
  */
 async function getUserProfileGroupedByCategory(userId) {
-  try {
-    const profileResult = await getUserProfile(userId);
-    
-    if (!profileResult.success) {
-      return profileResult;
-    }
-    
-    const grouped = {
-      common: {},
-      student: {},
-      instructor: {},
-      parent: {},
-      staff: {},
-    };
-
-    for (const [key, value] of Object.entries(profileResult.data)) {
-      // Convert camelCase back to find category
-      const snakeCase = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      const category = snakeCase.split('_')[0];
-      
-      if (grouped[category]) {
-        grouped[category][key] = value;
-      } else {
-        grouped.common[key] = value;
-      }
-    }
-
-    return { success: true, data: grouped };
-  } catch (error) {
-    return { success: false, error: error.message };
+  const profile = await getUserProfile(userId);
+  
+  if (!profile.success) {
+    return profile;
   }
+
+  const grouped = {};
+  for (const category of Object.values(ATTRIBUTE_CATEGORIES)) {
+    grouped[category] = {};
+  }
+
+  for (const [key, value] of Object.entries(profile.data)) {
+    // Convert camelCase back to snake_case to check category
+    const snakeCase = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    const categoryPrefix = snakeCase.split('_')[0];
+    
+    if (grouped[categoryPrefix]) {
+      grouped[categoryPrefix][key] = value;
+    } else {
+      grouped.common[key] = value;
+    }
+  }
+
+  return { success: true, data: grouped };
 }
 
 /**
@@ -887,45 +683,20 @@ async function getUserProfileGroupedByCategory(userId) {
  * @returns {Promise<boolean>} True if has profile data
  */
 async function hasUserProfile(userId) {
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
-  if (useSpecificTable) {
-    const [result] = await sequelize.query(
-      `SELECT COUNT(*) as count
-       FROM user_attribute_values uav
-       JOIN attribute_definitions ad ON uav.attribute_id = ad.id
-       JOIN entity_types et ON ad.entity_type_id = et.id
-       WHERE uav.user_id = :userId
-         AND et.name = :entityTypeName`,
+  try {
+    const result = await sequelize.query(
+      `SELECT EXISTS(
+         SELECT 1 FROM user_attribute_values WHERE user_id = :userId
+       ) as has_profile`,
       {
-        replacements: { 
-          userId, 
-          entityTypeName: ENTITY_TYPE_NAME,
-        },
+        replacements: { userId },
         type: sequelize.QueryTypes.SELECT,
       }
     );
-    return parseInt(result.count, 10) > 0;
-  } else {
-    const [result] = await sequelize.query(
-      `SELECT COUNT(*) as count
-       FROM attribute_values av
-       JOIN attribute_definitions ad ON av.attribute_id = ad.id
-       JOIN entity_types et ON ad.entity_type_id = et.id
-       WHERE av.entity_id = :userId
-         AND av.entity_type = :entityType
-         AND et.name = :entityTypeName
-         AND av."deletedAt" IS NULL`,
-      {
-        replacements: { 
-          userId, 
-          entityType: ENTITY_TYPE_NAME,
-          entityTypeName: ENTITY_TYPE_NAME,
-        },
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
-    return parseInt(result.count, 10) > 0;
+    return result[0]?.has_profile || false;
+  } catch (error) {
+    console.error('Error checking user profile:', error);
+    return false;
   }
 }
 
@@ -937,39 +708,24 @@ async function hasUserProfile(userId) {
  * @returns {Promise<object>} Results of setting defaults
  */
 async function initializeProfileForRole(userId, roleCategory) {
-  try {
-    const attrsResult = await getAvailableProfileAttributes(roleCategory);
-    
-    if (!attrsResult.success) {
-      return attrsResult;
-    }
-    
-    const defaults = {};
-    for (const attr of attrsResult.data) {
-      if (attr.defaultValue !== null && attr.defaultValue !== undefined) {
-        defaults[attr.name] = attr.defaultValue;
-      }
-    }
-
-    if (Object.keys(defaults).length === 0) {
-      // Return the list of available attributes even if no defaults
-      return { 
-        success: true, 
-        data: attrsResult.data.map(a => ({ name: a.name, displayName: a.displayName })),
-        message: 'Profile initialized (no default values to set)',
-      };
-    }
-
-    const results = await bulkSetUserProfile(userId, defaults);
-    return { 
-      success: true, 
-      data: attrsResult.data.map(a => ({ name: a.name, displayName: a.displayName })),
-      initialized: true, 
-      results,
-    };
-  } catch (error) {
-    return { success: false, error: error.message };
+  const availableAttrs = await getAvailableProfileAttributes(roleCategory);
+  
+  if (!availableAttrs.success) {
+    return availableAttrs;
   }
+
+  const defaultsToSet = {};
+  for (const attr of availableAttrs.data) {
+    if (attr.defaultValue !== null && attr.defaultValue !== undefined) {
+      defaultsToSet[attr.name] = attr.defaultValue;
+    }
+  }
+
+  if (Object.keys(defaultsToSet).length === 0) {
+    return { success: true, data: {}, message: 'No defaults to set' };
+  }
+
+  return bulkSetUserProfile(userId, defaultsToSet);
 }
 
 /**
@@ -978,16 +734,11 @@ async function initializeProfileForRole(userId, roleCategory) {
  * @returns {Promise<object>} Result with success flag
  */
 async function enableProfileEav(userId) {
-  try {
-    await sequelize.query(
-      `UPDATE users SET "profileEavEnabled" = true, "updatedAt" = NOW() WHERE id = :userId`,
-      { replacements: { userId } }
-    );
-    return { success: true };
-  } catch (error) {
-    console.error('Error enabling profile EAV:', error);
-    return { success: false, error: error.message };
-  }
+  await sequelize.query(
+    `UPDATE users SET "profileEavEnabled" = true WHERE id = :userId`,
+    { replacements: { userId } }
+  );
+  return { success: true };
 }
 
 /**
@@ -996,16 +747,11 @@ async function enableProfileEav(userId) {
  * @returns {Promise<object>} Result with success flag
  */
 async function disableProfileEav(userId) {
-  try {
-    await sequelize.query(
-      `UPDATE users SET "profileEavEnabled" = false, "updatedAt" = NOW() WHERE id = :userId`,
-      { replacements: { userId } }
-    );
-    return { success: true };
-  } catch (error) {
-    console.error('Error disabling profile EAV:', error);
-    return { success: false, error: error.message };
-  }
+  await sequelize.query(
+    `UPDATE users SET "profileEavEnabled" = false WHERE id = :userId`,
+    { replacements: { userId } }
+  );
+  return { success: true };
 }
 
 /**
@@ -1014,19 +760,14 @@ async function disableProfileEav(userId) {
  * @returns {Promise<boolean>} Whether EAV is enabled
  */
 async function isProfileEavEnabled(userId) {
-  try {
-    const [user] = await sequelize.query(
-      `SELECT "profileEavEnabled" FROM users WHERE id = :userId`,
-      {
-        replacements: { userId },
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
-    return user ? user.profileEavEnabled === true : false;
-  } catch (error) {
-    console.error('Error checking profile EAV status:', error);
-    return false;
-  }
+  const result = await sequelize.query(
+    `SELECT "profileEavEnabled" FROM users WHERE id = :userId`,
+    {
+      replacements: { userId },
+      type: sequelize.QueryTypes.SELECT,
+    }
+  );
+  return result[0]?.profileEavEnabled || false;
 }
 
 /**
@@ -1035,11 +776,10 @@ async function isProfileEavEnabled(userId) {
  * @returns {Promise<object>} Configuration info
  */
 async function getEavTableInfo() {
-  const config = await getEntityTypeConfig();
   return {
     entityType: ENTITY_TYPE_NAME,
-    useEntitySpecificTable: config?.useEntitySpecificTable || false,
-    tableName: config?.useEntitySpecificTable ? 'user_attribute_values' : 'attribute_values',
+    tableName: 'user_attribute_values',
+    description: 'Entity-specific EAV table with proper foreign key constraints',
   };
 }
 
@@ -1057,9 +797,8 @@ module.exports = {
   enableProfileEav,
   disableProfileEav,
   isProfileEavEnabled,
-  // New utility functions
+  // Utility functions
   getEavTableInfo,
-  shouldUseEntitySpecificTable,
   clearCache,
   ENTITY_TYPE_NAME,
   ATTRIBUTE_CATEGORIES,

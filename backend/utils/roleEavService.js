@@ -10,12 +10,10 @@
  * - Aggregate permissions across multiple roles (for multi-role users)
  * - Initialize default permissions for new roles
  * 
- * === Entity-Specific Table Support ===
- * This service now supports both the generic attribute_values table and
- * the entity-specific role_attribute_values table. The feature flag
- * `useEntitySpecificTable` on the EntityType determines which is used.
+ * === Entity-Specific Table ===
+ * This service uses the entity-specific role_attribute_values table exclusively.
  * 
- * Benefits of entity-specific table:
+ * Benefits:
  * - Proper foreign key constraints with CASCADE delete
  * - Better query performance (direct join vs polymorphic lookup)
  * - Database-enforced referential integrity
@@ -37,7 +35,7 @@ let entityTypeCache = null;
 let entityTypeCacheTimestamp = null;
 
 /**
- * Get the Role entity type configuration, including feature flags
+ * Get the Role entity type configuration
  * @returns {Promise<object|null>} Entity type config or null
  */
 async function getEntityTypeConfig() {
@@ -48,7 +46,7 @@ async function getEntityTypeConfig() {
   }
   
   const [config] = await sequelize.query(
-    `SELECT id, name, "tableName", "useEntitySpecificTable"
+    `SELECT id, name, "tableName"
      FROM entity_types 
      WHERE name = :name AND "deletedAt" IS NULL`,
     {
@@ -61,15 +59,6 @@ async function getEntityTypeConfig() {
   entityTypeCacheTimestamp = now;
   
   return entityTypeCache;
-}
-
-/**
- * Check if entity-specific table should be used
- * @returns {Promise<boolean>}
- */
-async function shouldUseEntitySpecificTable() {
-  const config = await getEntityTypeConfig();
-  return config?.useEntitySpecificTable === true;
 }
 
 /**
@@ -115,40 +104,21 @@ function clearCache() {
  * @returns {Promise<Object>} Object containing success status and permission data
  */
 async function getRolePermissions(roleId) {
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
   try {
-    let query;
     const replacements = { roleId };
 
-    if (useSpecificTable) {
-      // Use entity-specific role_attribute_values table (snake_case columns)
-      // Note: valueType now comes from attribute_definitions JOIN
-      query = `
-        SELECT ad.name, ad."valueType", ad."defaultValue",
-               rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
-               rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
-               rav.value_text as "valueText", rav.value_json as "valueJson"
-        FROM attribute_definitions ad
-        JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
-          AND rav.role_id = :roleId
-        WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
-        ORDER BY ad."sortOrder"`;
-    } else {
-      // Use generic attribute_values table (snake_case columns)
-      query = `
-        SELECT ad.name, ad."valueType", ad."defaultValue",
-               av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
-               av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", 
-               av.value_text as "valueText", av.value_json as "valueJson"
-        FROM attribute_definitions ad
-        JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN attribute_values av ON ad.id = av.attribute_id 
-          AND av.entity_type = 'Role' AND av.entity_id = :roleId AND av."deletedAt" IS NULL
-        WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
-        ORDER BY ad."sortOrder"`;
-    }
+    // Always use entity-specific role_attribute_values table (snake_case columns)
+    const query = `
+      SELECT ad.name, ad."valueType", ad."defaultValue",
+             rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
+             rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
+             rav.value_text as "valueText", rav.value_json as "valueJson"
+      FROM attribute_definitions ad
+      JOIN entity_types et ON ad."entityTypeId" = et.id
+      LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
+        AND rav.role_id = :roleId
+      WHERE et.name = 'Role' AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true
+      ORDER BY ad."sortOrder"`;
 
     const permissions = await sequelize.query(query, {
       type: QueryTypes.SELECT,
@@ -182,37 +152,20 @@ async function getRolePermissions(roleId) {
  * @returns {Promise<Object>} Object containing success status and permission value
  */
 async function getRolePermission(roleId, permissionName) {
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
   try {
-    let query;
     const replacements = { roleId, permissionName };
 
-    if (useSpecificTable) {
-      query = `
-        SELECT ad.name, ad."valueType", ad."defaultValue",
-               rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
-               rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
-               rav.value_text as "valueText", rav.value_json as "valueJson"
-        FROM attribute_definitions ad
-        JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
-          AND rav.role_id = :roleId
-        WHERE et.name = 'Role' AND ad.name = :permissionName 
-          AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
-    } else {
-      query = `
-        SELECT ad.name, ad."valueType", ad."defaultValue",
-               av.value_string as "valueString", av.value_integer as "valueInteger", av.value_decimal as "valueDecimal", 
-               av.value_boolean as "valueBoolean", av.value_date as "valueDate", av.value_datetime as "valueDatetime", 
-               av.value_text as "valueText", av.value_json as "valueJson"
-        FROM attribute_definitions ad
-        JOIN entity_types et ON ad."entityTypeId" = et.id
-        LEFT JOIN attribute_values av ON ad.id = av.attribute_id 
-          AND av.entity_type = 'Role' AND av.entity_id = :roleId AND av."deletedAt" IS NULL
-        WHERE et.name = 'Role' AND ad.name = :permissionName 
-          AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
-    }
+    const query = `
+      SELECT ad.name, ad."valueType", ad."defaultValue",
+             rav.value_string as "valueString", rav.value_integer as "valueInteger", rav.value_decimal as "valueDecimal", 
+             rav.value_boolean as "valueBoolean", rav.value_date as "valueDate", rav.value_datetime as "valueDatetime", 
+             rav.value_text as "valueText", rav.value_json as "valueJson"
+      FROM attribute_definitions ad
+      JOIN entity_types et ON ad."entityTypeId" = et.id
+      LEFT JOIN role_attribute_values rav ON ad.id = rav.attribute_id 
+        AND rav.role_id = :roleId
+      WHERE et.name = 'Role' AND ad.name = :permissionName 
+        AND et."deletedAt" IS NULL AND ad."deletedAt" IS NULL AND ad."isActive" = true`;
 
     const result = await sequelize.query(query, {
       type: QueryTypes.SELECT,
@@ -247,7 +200,6 @@ async function getRolePermission(roleId, permissionName) {
  */
 async function setRolePermission(roleId, permissionName, value) {
   const transaction = await sequelize.transaction();
-  const useSpecificTable = await shouldUseEntitySpecificTable();
   
   try {
     // Get attribute definition
@@ -273,80 +225,41 @@ async function setRolePermission(roleId, permissionName, value) {
     
     // Prepare value columns for upsert (snake_case for DB)
     const valueColumns = prepareValueColumnsForRole(value, valueType);
-    let wasInserted;
 
-    if (useSpecificTable) {
-      // Use entity-specific role_attribute_values table (snake_case, no valueType)
-      const [upsertResult] = await sequelize.query(
-        `INSERT INTO role_attribute_values 
-         (role_id, attribute_id,
-          value_string, value_integer, value_decimal, value_boolean,
-          value_date, value_datetime, value_text, value_json,
-          sort_order, "createdAt", "updatedAt")
-         VALUES (:role_id, :attribute_id,
-                 :value_string, :value_integer, :value_decimal, :value_boolean,
-                 :value_date, :value_datetime, :value_text, :value_json,
-                 0, NOW(), NOW())
-         ON CONFLICT (role_id, attribute_id) 
-         DO UPDATE SET
-           value_string = EXCLUDED.value_string,
-           value_integer = EXCLUDED.value_integer,
-           value_decimal = EXCLUDED.value_decimal,
-           value_boolean = EXCLUDED.value_boolean,
-           value_date = EXCLUDED.value_date,
-           value_datetime = EXCLUDED.value_datetime,
-           value_text = EXCLUDED.value_text,
-           value_json = EXCLUDED.value_json,
-           "updatedAt" = NOW()
-         RETURNING (xmax = 0) AS inserted`,
-        {
-          replacements: {
-            attribute_id: attributeId,
-            role_id: roleId,
-            ...valueColumns,
-          },
-          type: QueryTypes.SELECT,
-          transaction
-        }
-      );
-      wasInserted = upsertResult?.inserted === true;
-    } else {
-      // Use generic attribute_values table (snake_case, no valueType)
-      const [upsertResult] = await sequelize.query(
-        `INSERT INTO attribute_values 
-         (id, attribute_id, entity_type, entity_id,
-          value_string, value_integer, value_decimal, value_boolean,
-          value_date, value_datetime, value_text, value_json,
-          sort_order, "createdAt", "updatedAt", "deletedAt")
-         VALUES (gen_random_uuid(), :attribute_id, 'Role', :role_id,
-                 :value_string, :value_integer, :value_decimal, :value_boolean,
-                 :value_date, :value_datetime, :value_text, :value_json,
-                 0, NOW(), NOW(), NULL)
-         ON CONFLICT (entity_type, entity_id, attribute_id) 
-         WHERE "deletedAt" IS NULL
-         DO UPDATE SET
-           value_string = EXCLUDED.value_string,
-           value_integer = EXCLUDED.value_integer,
-           value_decimal = EXCLUDED.value_decimal,
-           value_boolean = EXCLUDED.value_boolean,
-           value_date = EXCLUDED.value_date,
-           value_datetime = EXCLUDED.value_datetime,
-           value_text = EXCLUDED.value_text,
-           value_json = EXCLUDED.value_json,
-           "updatedAt" = NOW()
-         RETURNING id, (xmax = 0) AS inserted`,
-        {
-          replacements: {
-            attribute_id: attributeId,
-            role_id: roleId,
-            ...valueColumns,
-          },
-          type: QueryTypes.SELECT,
-          transaction
-        }
-      );
-      wasInserted = upsertResult?.inserted === true;
-    }
+    // Use entity-specific role_attribute_values table (snake_case)
+    const [upsertResult] = await sequelize.query(
+      `INSERT INTO role_attribute_values 
+       (role_id, attribute_id,
+        value_string, value_integer, value_decimal, value_boolean,
+        value_date, value_datetime, value_text, value_json,
+        sort_order, "createdAt", "updatedAt")
+       VALUES (:role_id, :attribute_id,
+               :value_string, :value_integer, :value_decimal, :value_boolean,
+               :value_date, :value_datetime, :value_text, :value_json,
+               0, NOW(), NOW())
+       ON CONFLICT (role_id, attribute_id) 
+       DO UPDATE SET
+         value_string = EXCLUDED.value_string,
+         value_integer = EXCLUDED.value_integer,
+         value_decimal = EXCLUDED.value_decimal,
+         value_boolean = EXCLUDED.value_boolean,
+         value_date = EXCLUDED.value_date,
+         value_datetime = EXCLUDED.value_datetime,
+         value_text = EXCLUDED.value_text,
+         value_json = EXCLUDED.value_json,
+         "updatedAt" = NOW()
+       RETURNING (xmax = 0) AS inserted`,
+      {
+        replacements: {
+          attribute_id: attributeId,
+          role_id: roleId,
+          ...valueColumns,
+        },
+        type: QueryTypes.SELECT,
+        transaction
+      }
+    );
+    const wasInserted = upsertResult?.inserted === true;
     
     await transaction.commit();
     
@@ -630,47 +543,23 @@ async function getAvailablePermissions() {
  * @returns {Promise<Object>} Object containing success status
  */
 async function deleteRolePermission(roleId, permissionName) {
-  const useSpecificTable = await shouldUseEntitySpecificTable();
-
   try {
-    if (useSpecificTable) {
-      // Delete from entity-specific table (snake_case)
-      const result = await sequelize.query(
-        `DELETE FROM role_attribute_values rav
-         USING attribute_definitions ad, entity_types et
-         WHERE rav.attribute_id = ad.id
-           AND ad.entity_type_id = et.id
-           AND rav.role_id = :roleId
-           AND ad.name = :permissionName
-           AND et.name = 'Role'
-         RETURNING rav.role_id`,
-        {
-          replacements: { roleId, permissionName },
-          type: QueryTypes.SELECT,
-        }
-      );
-      return { success: true, deleted: result.length > 0 };
-    } else {
-      // Soft delete from generic attribute_values table (snake_case)
-      const result = await sequelize.query(
-        `UPDATE attribute_values av
-         SET "deletedAt" = NOW()
-         FROM attribute_definitions ad
-         JOIN entity_types et ON ad.entity_type_id = et.id
-         WHERE av.attribute_id = ad.id
-           AND av.entity_id = :roleId
-           AND av.entity_type = 'Role'
-           AND ad.name = :permissionName
-           AND et.name = 'Role'
-           AND av."deletedAt" IS NULL
-         RETURNING av.id`,
-        {
-          replacements: { roleId, permissionName },
-          type: QueryTypes.SELECT,
-        }
-      );
-      return { success: true, deleted: result.length > 0 };
-    }
+    // Delete from entity-specific table (snake_case)
+    const result = await sequelize.query(
+      `DELETE FROM role_attribute_values rav
+       USING attribute_definitions ad, entity_types et
+       WHERE rav.attribute_id = ad.id
+         AND ad."entityTypeId" = et.id
+         AND rav.role_id = :roleId
+         AND ad.name = :permissionName
+         AND et.name = 'Role'
+       RETURNING rav.role_id`,
+      {
+        replacements: { roleId, permissionName },
+        type: QueryTypes.SELECT,
+      }
+    );
+    return { success: true, deleted: result.length > 0 };
   } catch (error) {
     console.error('Error deleting role permission:', error);
     return { success: false, error: error.message };
@@ -683,11 +572,10 @@ async function deleteRolePermission(roleId, permissionName) {
  * @returns {Promise<object>} Configuration info
  */
 async function getEavTableInfo() {
-  const config = await getEntityTypeConfig();
   return {
     entityType: ENTITY_TYPE_NAME,
-    useEntitySpecificTable: config?.useEntitySpecificTable || false,
-    tableName: config?.useEntitySpecificTable ? 'role_attribute_values' : 'attribute_values',
+    tableName: 'role_attribute_values',
+    description: 'Entity-specific EAV table with proper foreign key constraints',
   };
 }
 
@@ -809,9 +697,8 @@ module.exports = {
   getAvailablePermissions,
   getAttributeDefinitions,
   
-  // New utility functions
+  // Utility functions
   getEavTableInfo,
-  shouldUseEntitySpecificTable,
   
   // Cache management
   clearCache,

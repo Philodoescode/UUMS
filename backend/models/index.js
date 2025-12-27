@@ -42,11 +42,14 @@ const ResearchPublication = require('./researchPublicationModel');
 // ===== EAV (Entity-Attribute-Value) Models =====
 const EntityType = require('./entityTypeModel');
 const AttributeDefinition = require('./attributeDefinitionModel');
-const AttributeValue = require('./attributeValueModel');
+// NOTE: Generic AttributeValue model removed - use entity-specific models below
 
 // ===== Entity-Specific EAV Models =====
 const UserAttributeValue = require('./userAttributeValueModel');
 const RoleAttributeValue = require('./roleAttributeValueModel');
+const AssessmentAttributeValue = require('./assessmentAttributeValueModel');
+const FacilityAttributeValue = require('./facilityAttributeValueModel');
+const InstructorAttributeValue = require('./instructorAttributeValueModel');
 
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
@@ -314,12 +317,7 @@ ProfessionalDevelopment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(ResearchPublication, { foreignKey: 'userId', as: 'researchPublications' });
 ResearchPublication.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// ===== EAV (Entity-Attribute-Value) Associations =====
-EntityType.hasMany(AttributeDefinition, { foreignKey: 'entityTypeId', as: 'attributes' });
-AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'entityType' });
-
-AttributeDefinition.hasMany(AttributeValue, { foreignKey: 'attributeId', as: 'values' });
-AttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+// Generic EAV associations removed - using entity-specific tables with FK CASCADE
 
 // ===== Entity-Specific EAV Associations =====
 // User attribute values (entity-specific table with proper FK)
@@ -336,83 +334,38 @@ RoleAttributeValue.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
 AttributeDefinition.hasMany(RoleAttributeValue, { foreignKey: 'attributeId', as: 'roleValues' });
 RoleAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attributeDefinition' });
 
-// ===== EAV Cascade Delete Hooks =====
-// Clean up orphaned attribute_values when parent entities are deleted
-// This implements application-level cascade delete for the polymorphic EAV relationship
+// Assessment attribute values (entity-specific table with proper FK)
+Assessment.hasMany(AssessmentAttributeValue, { foreignKey: 'assessmentId', as: 'attributeValues' });
+AssessmentAttributeValue.belongsTo(Assessment, { foreignKey: 'assessmentId', as: 'assessment' });
 
-/**
- * Helper function to delete attribute values for a given entity
- * Uses soft delete (paranoid) to match the model's deletion behavior
- */
-async function deleteAttributeValuesForEntity(entityType, entityId, options = {}) {
-  const { transaction = null } = options;
-  
-  try {
-    await AttributeValue.update(
-      { deletedAt: new Date() },
-      {
-        where: {
-          entityType,
-          entityId,
-          deletedAt: null,
-        },
-        transaction,
-      }
-    );
-  } catch (error) {
-    console.error(`Error cleaning up attribute values for ${entityType}:${entityId}:`, error.message);
-    // Don't throw - allow parent delete to proceed
-  }
-}
+AttributeDefinition.hasMany(AssessmentAttributeValue, { foreignKey: 'attributeId', as: 'assessmentValues' });
+AssessmentAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
 
-// User deletion hook - clean up User EAV attributes
-User.beforeDestroy(async (user, options) => {
-  await deleteAttributeValuesForEntity('User', user.id, options);
-});
+// Facility attribute values (entity-specific table with proper FK)
+Facility.hasMany(FacilityAttributeValue, { foreignKey: 'facilityId', as: 'attributeValues' });
+FacilityAttributeValue.belongsTo(Facility, { foreignKey: 'facilityId', as: 'facility' });
 
-// Role deletion hook - clean up Role EAV attributes (permissions)
-Role.beforeDestroy(async (role, options) => {
-  await deleteAttributeValuesForEntity('Role', role.id, options);
-});
+AttributeDefinition.hasMany(FacilityAttributeValue, { foreignKey: 'attributeId', as: 'facilityValues' });
+FacilityAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
 
-// Course deletion hook - clean up Course EAV attributes
-Course.beforeDestroy(async (course, options) => {
-  await deleteAttributeValuesForEntity('Course', course.id, options);
-});
+// Instructor attribute values (entity-specific table with proper FK)
+Instructor.hasMany(InstructorAttributeValue, { foreignKey: 'instructorId', as: 'attributeValues' });
+InstructorAttributeValue.belongsTo(Instructor, { foreignKey: 'instructorId', as: 'instructor' });
 
-// Department deletion hook - clean up Department EAV attributes
-Department.beforeDestroy(async (department, options) => {
-  await deleteAttributeValuesForEntity('Department', department.id, options);
-});
+AttributeDefinition.hasMany(InstructorAttributeValue, { foreignKey: 'attributeId', as: 'instructorValues' });
+InstructorAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
 
-// Instructor deletion hook - clean up Instructor EAV attributes
-Instructor.beforeDestroy(async (instructor, options) => {
-  await deleteAttributeValuesForEntity('Instructor', instructor.id, options);
-});
+// NOTE: EAV cascade delete hooks removed - entity-specific tables use DB-level FK CASCADE
+// The beforeDestroy hooks are no longer needed since:
+// - user_attribute_values has FK to users(id) ON DELETE CASCADE
+// - role_attribute_values has FK to roles(id) ON DELETE CASCADE
+// - assessment_attribute_values has FK to assessments(id) ON DELETE CASCADE
+// - facility_attribute_values has FK to facilities(id) ON DELETE CASCADE  
+// - instructor_attribute_values has FK to instructors(id) ON DELETE CASCADE
 
-// Bulk delete hooks for operations that don't trigger individual hooks
-User.beforeBulkDestroy(async (options) => {
-  if (options.where && options.where.id) {
-    const ids = Array.isArray(options.where.id) ? options.where.id : [options.where.id];
-    for (const id of ids) {
-      await deleteAttributeValuesForEntity('User', id, options);
-    }
-  }
-});
-
-Role.beforeBulkDestroy(async (options) => {
-  if (options.where && options.where.id) {
-    const ids = Array.isArray(options.where.id) ? options.where.id : [options.where.id];
-    for (const id of ids) {
-      await deleteAttributeValuesForEntity('Role', id, options);
-    }
-  }
-});
-
-// Export the helper function for manual cleanup if needed
-const eavHelpers = {
-  deleteAttributeValuesForEntity,
-};
+// Keep entity type associations
+EntityType.hasMany(AttributeDefinition, { foreignKey: 'entityTypeId', as: 'attributes' });
+AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'entityType' });
 
 module.exports = {
   sequelize,
@@ -456,9 +409,10 @@ module.exports = {
   ResearchPublication,
   EntityType,
   AttributeDefinition,
-  AttributeValue,
-  // Entity-Specific EAV Models
+  // Entity-Specific EAV Models (generic AttributeValue removed)
   UserAttributeValue,
   RoleAttributeValue,
-  eavHelpers,
+  AssessmentAttributeValue,
+  FacilityAttributeValue,
+  InstructorAttributeValue,
 };
