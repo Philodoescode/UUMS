@@ -24,39 +24,49 @@ module.exports = {
       // ========================================
       console.log('Step 1: Migrating existing user roles to user_roles table...');
       
-      // Get all users with roleId set
-      const usersWithRoles = await queryInterface.sequelize.query(
-        `SELECT id, "roleId" FROM users WHERE "roleId" IS NOT NULL`,
+      // Check if roleId column exists
+      const roleIdColumnExists = await queryInterface.sequelize.query(
+        `SELECT column_name FROM information_schema.columns 
+         WHERE table_name = 'users' AND column_name = 'roleId'`,
         { type: Sequelize.QueryTypes.SELECT, transaction }
       );
-      
-      console.log(`Found ${usersWithRoles.length} users with roleId to migrate`);
-      
-      // Insert into user_roles if not already exists
-      for (const user of usersWithRoles) {
-        // Check if this user-role combination already exists
-        const existingUserRole = await queryInterface.sequelize.query(
-          `SELECT id FROM user_roles WHERE "userId" = :userId AND "roleId" = :roleId`,
-          {
-            type: Sequelize.QueryTypes.SELECT,
-            replacements: { userId: user.id, roleId: user.roleId },
-            transaction
-          }
+
+      if (roleIdColumnExists.length > 0) {
+        // Get all users with roleId set
+        const usersWithRoles = await queryInterface.sequelize.query(
+          `SELECT id, "roleId" FROM users WHERE "roleId" IS NOT NULL`,
+          { type: Sequelize.QueryTypes.SELECT, transaction }
         );
         
-        if (existingUserRole.length === 0) {
-          await queryInterface.sequelize.query(
-            `INSERT INTO user_roles (id, "userId", "roleId", "createdAt", "updatedAt")
-             VALUES (gen_random_uuid(), :userId, :roleId, NOW(), NOW())`,
+        console.log(`Found ${usersWithRoles.length} users with roleId to migrate`);
+        
+        // Insert into user_roles if not already exists
+        for (const user of usersWithRoles) {
+          // Check if this user-role combination already exists
+          const existingUserRole = await queryInterface.sequelize.query(
+            `SELECT id FROM user_roles WHERE "userId" = :userId AND "roleId" = :roleId`,
             {
+              type: Sequelize.QueryTypes.SELECT,
               replacements: { userId: user.id, roleId: user.roleId },
               transaction
             }
           );
+          
+          if (existingUserRole.length === 0) {
+            await queryInterface.sequelize.query(
+              `INSERT INTO user_roles (id, "userId", "roleId", "createdAt", "updatedAt")
+               VALUES (gen_random_uuid(), :userId, :roleId, NOW(), NOW())`,
+              {
+                replacements: { userId: user.id, roleId: user.roleId },
+                transaction
+              }
+            );
+          }
         }
+        console.log('Completed migrating user roles to user_roles table');
+      } else {
+        console.log('roleId column does not exist in users table, skipping data migration');
       }
-      
-      console.log('Completed migrating user roles to user_roles table');
 
       // ========================================
       // 2. Remove roleId column from users table

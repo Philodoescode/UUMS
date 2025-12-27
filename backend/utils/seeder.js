@@ -194,39 +194,53 @@ const seedDatabase = async () => {
       }
     }
 
+    // Cleanup: Ensure instructor@example.com does NOT have advisor role (enforcing single role for testing)
+    const instructorUserForCleanup = createdUsers['instructor@example.com'];
+    if (instructorUserForCleanup && roleDocs['advisor']) {
+        await UserRole.destroy({
+            where: {
+                userId: instructorUserForCleanup.id,
+                roleId: roleDocs['advisor']
+            }
+        });
+    }
+
     // 6. Create user with both instructor and advisor roles for announcement testing
     // This demonstrates multi-role capability
-    const instructorAdvisorUser = createdUsers['instructor@example.com'];
-    if (instructorAdvisorUser) {
-      // Ensure instructor role is in UserRole table
-      await UserRole.findOrCreate({
+    // Modified: advisor@example.com gets the extra instructor role instead of instructor@example.com getting advisor role
+    const advisorUser = createdUsers['advisor@example.com'];
+    if (advisorUser) {
+      // Add instructor role to advisor@example.com
+      const [instructorRole, instructorRoleCreated] = await UserRole.findOrCreate({
         where: {
-          userId: instructorAdvisorUser.id,
+          userId: advisorUser.id,
           roleId: roleDocs['instructor']
         },
         defaults: {
-          userId: instructorAdvisorUser.id,
+          userId: advisorUser.id,
           roleId: roleDocs['instructor']
         }
       });
 
-      // Add advisor role to demonstrate multi-role (instructor + advisor)
-      const [advisorRole, advisorRoleCreated] = await UserRole.findOrCreate({
-        where: {
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['advisor']
-        },
-        defaults: {
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['advisor']
-        }
-      });
-
-      if (advisorRoleCreated) {
-        console.log(`Added advisor role to instructor@example.com (multi-role demo)`);
+      if (instructorRoleCreated) {
+        console.log(`Added instructor role to advisor@example.com (multi-role demo)`);
       }
 
-      console.log(`instructor@example.com now has both instructor and advisor roles for announcement permissions`);
+      // Create Instructor profile for advisor@example.com (required for publishing announcements)
+      const [advisorInstructor, created] = await Instructor.findOrCreate({
+        where: { userId: advisorUser.id },
+        defaults: {
+          userId: advisorUser.id,
+          departmentId: departmentDocs['CS'],
+          title: 'Advisor & Instructor',
+          officeLocation: 'Room 303',
+        },
+      });
+      if (created) {
+        console.log(`Instructor profile created for: ${advisorUser.email}`);
+      }
+      
+      console.log(`advisor@example.com now has both instructor and advisor roles for announcement permissions`);
     }
 
     // 7. Create Mock Courses
@@ -302,6 +316,30 @@ const seedDatabase = async () => {
           console.log(`Assigned instructor to course: ${courseCode}`);
         }
       }
+    }
+
+    // Assign Advisor (who is also Instructor) to CS101
+    const advisorUserForAssign = createdUsers['advisor@example.com'];
+    if (advisorUserForAssign) {
+        const advisorInstructorProfile = await Instructor.findOne({
+            where: { userId: advisorUserForAssign.id }
+        });
+        
+        if (advisorInstructorProfile && createdCourses['CS101']) {
+             const [assignment, created] = await CourseInstructor.findOrCreate({
+              where: {
+                courseId: createdCourses['CS101'].id,
+                instructorId: advisorInstructorProfile.id
+              },
+              defaults: {
+                courseId: createdCourses['CS101'].id,
+                instructorId: advisorInstructorProfile.id
+              }
+            });
+            if (created) {
+              console.log(`Assigned advisor-instructor to course: CS101`);
+            }
+        }
     }
 
     // 9. Link Parent to Student
