@@ -73,14 +73,15 @@ const assignTA = async (req, res) => {
 
         // Verify the target user is a TA
         const taUser = await User.findByPk(taUserId, {
-            include: [{ model: Role, as: 'role' }],
+            include: [{ model: Role, as: 'roles' }],
         });
 
         if (!taUser) {
             return res.status(404).json({ message: 'TA user not found' });
         }
 
-        if (taUser.role?.name !== 'ta') {
+        const isTa = taUser.roles && taUser.roles.some(r => r.name === 'ta');
+        if (!isTa) {
             return res.status(400).json({ message: 'Selected user is not a TA' });
         }
 
@@ -261,8 +262,18 @@ const getAvailableTAs = async (req, res) => {
             return res.json([]);
         }
 
+        // Use UserRole join table to find users with TA role
         const tas = await User.findAll({
-            where: { roleId: taRole.id, isActive: true },
+            include: [
+                {
+                    model: Role,
+                    as: 'roles',
+                    through: { attributes: [] },
+                    where: { id: taRole.id },
+                    attributes: []
+                }
+            ],
+            where: { isActive: true },
             attributes: ['id', 'fullName', 'email'],
             order: [['fullName', 'ASC']],
         });

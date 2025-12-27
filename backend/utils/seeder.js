@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Role, User, Department, Instructor, Compensation, ParentStudent, Course, Enrollment, CourseInstructor, MeetingRequest } = require('../models');
+const { Role, User, Department, Instructor, Compensation, ParentStudent, Course, Enrollment, CourseInstructor, MeetingRequest, UserRole } = require('../models');
 
 const seedDatabase = async () => {
   try {
@@ -45,59 +45,78 @@ const seedDatabase = async () => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('password123', salt);
 
+    // User data without roleId (will use UserRole join table)
     const users = [
       {
         fullName: 'Admin User',
         email: 'admin@example.com',
         password: hashedPassword,
-        roleId: roleDocs['admin'],
+        roleName: 'admin',
       },
       {
         fullName: 'Instructor User',
         email: 'instructor@example.com',
         password: hashedPassword,
-        roleId: roleDocs['instructor'],
+        roleName: 'instructor',
       },
       {
         fullName: 'Student User',
         email: 'student@example.com',
         password: hashedPassword,
-        roleId: roleDocs['student'],
+        roleName: 'student',
       },
       {
         fullName: 'Advisor User',
         email: 'advisor@example.com',
         password: hashedPassword,
-        roleId: roleDocs['advisor'],
+        roleName: 'advisor',
       },
       {
         fullName: 'HR Administrator',
         email: 'hr@example.com',
         password: hashedPassword,
-        roleId: roleDocs['hr'],
+        roleName: 'hr',
       },
       {
         fullName: 'TA User',
         email: 'ta@example.com',
         password: hashedPassword,
-        roleId: roleDocs['ta'],
+        roleName: 'ta',
       },
       {
         fullName: 'Parent User',
         email: 'parent@example.com',
         password: hashedPassword,
-        roleId: roleDocs['parent'],
+        roleName: 'parent',
       },
     ];
 
     const createdUsers = {};
     for (const userData of users) {
+      const { roleName, ...userDataWithoutRole } = userData;
       const [user, created] = await User.findOrCreate({
         where: { email: userData.email },
-        defaults: userData,
+        defaults: userDataWithoutRole,
       });
+      
       if (created) {
         console.log(`User created: ${userData.email} (${userData.fullName})`);
+        // Assign role through UserRole join table (multi-role pattern)
+        if (roleName && roleDocs[roleName]) {
+          await UserRole.findOrCreate({
+            where: { userId: user.id, roleId: roleDocs[roleName] },
+            defaults: { userId: user.id, roleId: roleDocs[roleName] }
+          });
+          console.log(`  - Assigned role '${roleName}' via UserRole`);
+        }
+      } else {
+        // Ensure existing user has role assignment in UserRole table
+        if (roleName && roleDocs[roleName]) {
+          await UserRole.findOrCreate({
+            where: { userId: user.id, roleId: roleDocs[roleName] },
+            defaults: { userId: user.id, roleId: roleDocs[roleName] }
+          });
+        }
       }
       createdUsers[userData.email] = user;
     }
@@ -175,44 +194,53 @@ const seedDatabase = async () => {
       }
     }
 
+    // Cleanup: Ensure instructor@example.com does NOT have advisor role (enforcing single role for testing)
+    const instructorUserForCleanup = createdUsers['instructor@example.com'];
+    if (instructorUserForCleanup && roleDocs['advisor']) {
+        await UserRole.destroy({
+            where: {
+                userId: instructorUserForCleanup.id,
+                roleId: roleDocs['advisor']
+            }
+        });
+    }
+
     // 6. Create user with both instructor and advisor roles for announcement testing
-    const instructorAdvisorUser = createdUsers['instructor@example.com'];
-    if (instructorAdvisorUser) {
-      const { UserRole } = require('../models');
+    // This demonstrates multi-role capability
+    // Modified: advisor@example.com gets the extra instructor role instead of instructor@example.com getting advisor role
+    const advisorUser = createdUsers['advisor@example.com'];
+    if (advisorUser) {
+      // Add instructor role to advisor@example.com
+      const [instructorRole, instructorRoleCreated] = await UserRole.findOrCreate({
+        where: {
+          userId: advisorUser.id,
+          roleId: roleDocs['instructor']
+        },
+        defaults: {
+          userId: advisorUser.id,
+          roleId: roleDocs['instructor']
+        }
+      });
+
+      if (instructorRoleCreated) {
+        console.log(`Added instructor role to advisor@example.com (multi-role demo)`);
+      }
+
+      // Create Instructor profile for advisor@example.com (required for publishing announcements)
+      const [advisorInstructor, created] = await Instructor.findOrCreate({
+        where: { userId: advisorUser.id },
+        defaults: {
+          userId: advisorUser.id,
+          departmentId: departmentDocs['CS'],
+          title: 'Advisor & Instructor',
+          officeLocation: 'Room 303',
+        },
+      });
+      if (created) {
+        console.log(`Instructor profile created for: ${advisorUser.email}`);
+      }
       
-      // Add instructor role to UserRole table (from primary roleId)
-      const existingInstructorRole = await UserRole.findOne({
-        where: {
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['instructor']
-        }
-      });
-
-      if (!existingInstructorRole) {
-        await UserRole.create({
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['instructor']
-        });
-        console.log(`Added instructor role to UserRole table for instructor@example.com`);
-      }
-
-      // Add advisor role to UserRole table
-      const existingAdvisorRole = await UserRole.findOne({
-        where: {
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['advisor']
-        }
-      });
-
-      if (!existingAdvisorRole) {
-        await UserRole.create({
-          userId: instructorAdvisorUser.id,
-          roleId: roleDocs['advisor']
-        });
-        console.log(`Added advisor role to UserRole table for instructor@example.com`);
-      }
-
-      console.log(`instructor@example.com now has both instructor and advisor roles for announcement permissions`);
+      console.log(`advisor@example.com now has both instructor and advisor roles for announcement permissions`);
     }
 
     // 7. Create Mock Courses
@@ -288,6 +316,30 @@ const seedDatabase = async () => {
           console.log(`Assigned instructor to course: ${courseCode}`);
         }
       }
+    }
+
+    // Assign Advisor (who is also Instructor) to CS101
+    const advisorUserForAssign = createdUsers['advisor@example.com'];
+    if (advisorUserForAssign) {
+        const advisorInstructorProfile = await Instructor.findOne({
+            where: { userId: advisorUserForAssign.id }
+        });
+        
+        if (advisorInstructorProfile && createdCourses['CS101']) {
+             const [assignment, created] = await CourseInstructor.findOrCreate({
+              where: {
+                courseId: createdCourses['CS101'].id,
+                instructorId: advisorInstructorProfile.id
+              },
+              defaults: {
+                courseId: createdCourses['CS101'].id,
+                instructorId: advisorInstructorProfile.id
+              }
+            });
+            if (created) {
+              console.log(`Assigned advisor-instructor to course: CS101`);
+            }
+        }
     }
 
     // 9. Link Parent to Student

@@ -109,7 +109,7 @@ dist
 
 # Docusaurus cache and generated files
 .docusaurus
-
+uploads
 # Serverless directories
 .serverless/
 

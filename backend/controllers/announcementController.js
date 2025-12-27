@@ -7,10 +7,27 @@ const createAnnouncement = async (req, res) => {
         const { courseId, title, content } = req.body;
         const userId = req.user.id;
 
+        // Check roles
+        const userRoles = req.user.roles ? req.user.roles.map(r => r.name) : [];
+        const isInstructor = userRoles.includes('instructor');
+        const isAdvisor = userRoles.includes('advisor');
+        const isAdmin = userRoles.includes('admin');
+
+        if (!isAdmin) {
+            if (!isInstructor) {
+                return res.status(403).json({ message: 'Only instructors can create announcements.' });
+            }
+            // Requirement: whoever have only instructor role, cannot publish announcments.
+            // Requirement: for any user who have both instructor and advisor can publish announcments.
+            if (!isAdvisor) {
+                return res.status(403).json({ message: 'You must have both Instructor and Advisor roles to publish announcements.' });
+            }
+        }
+
         // 1. Verify User is Instructor
         const instructor = await Instructor.findOne({ where: { userId } });
         if (!instructor) {
-            return res.status(403).json({ message: 'Only instructors can create announcements.' });
+            return res.status(403).json({ message: 'Instructor profile not found.' });
         }
 
         // 2. Verify Instructor is assigned to this course
@@ -18,7 +35,7 @@ const createAnnouncement = async (req, res) => {
             where: { courseId, instructorId: instructor.id }
         });
 
-        if (!isAssigned && req.user.role.name !== 'admin') {
+        if (!isAssigned && !isAdmin) {
             return res.status(403).json({ message: 'You are not assigned to this course.' });
         }
 

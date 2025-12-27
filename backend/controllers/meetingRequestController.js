@@ -30,7 +30,7 @@ const createMeetingRequest = async (req, res) => {
 
     // 3. Verify professor exists
     const professor = await User.findByPk(professorId, {
-      include: [{ model: Role, as: 'role' }],
+      include: [{ model: Role, as: 'roles' }],
     });
 
     if (!professor) {
@@ -40,8 +40,12 @@ const createMeetingRequest = async (req, res) => {
     }
 
     // 4. Verify professor has instructor role
-    const professorRoleName = professor.role?.name?.toLowerCase();
-    if (professorRoleName !== 'instructor' && professorRoleName !== 'ta') {
+    const hasInstructorRole = professor.roles && professor.roles.some(r => {
+      const name = r.name.toLowerCase();
+      return name === 'instructor' || name === 'ta';
+    });
+    
+    if (!hasInstructorRole) {
       return res.status(400).json({
         message: 'You can only request meetings with instructors or TAs',
       });
@@ -95,13 +99,13 @@ const createMeetingRequest = async (req, res) => {
           model: User,
           as: 'student',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'professor',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
       ],
     });
@@ -126,7 +130,12 @@ const getMyMeetingRequests = async (req, res) => {
   try {
     const userId = req.user.id;
     const { status } = req.query;
-    const userRoleName = req.user.role?.name?.toLowerCase();
+    
+    // Check if user has instructor or ta role
+    const isInstructorOrTa = req.user.roles && req.user.roles.some(r => {
+      const name = r.name.toLowerCase();
+      return name === 'instructor' || name === 'ta';
+    });
 
     // Build where clause
     const whereClause = {};
@@ -137,7 +146,7 @@ const getMyMeetingRequests = async (req, res) => {
     let meetingRequests;
 
     // If user is instructor/professor, get requests made to them
-    if (userRoleName === 'instructor' || userRoleName === 'ta') {
+    if (isInstructorOrTa) {
       meetingRequests = await MeetingRequest.findAll({
         where: {
           professorId: userId,
@@ -148,7 +157,7 @@ const getMyMeetingRequests = async (req, res) => {
             model: User,
             as: 'student',
             attributes: ['id', 'fullName', 'email'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            include: [{ model: Role, as: 'roles', attributes: ['name'] }],
           },
           {
             model: User,
@@ -175,7 +184,7 @@ const getMyMeetingRequests = async (req, res) => {
             model: User,
             as: 'professor',
             attributes: ['id', 'fullName', 'email'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            include: [{ model: Role, as: 'roles', attributes: ['name'] }],
           },
         ],
         order: [['createdAt', 'DESC']],
@@ -202,13 +211,13 @@ const getMeetingRequestById = async (req, res) => {
           model: User,
           as: 'student',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'professor',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
       ],
     });
@@ -324,13 +333,13 @@ const updateMeetingRequestStatus = async (req, res) => {
           model: User,
           as: 'student',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'professor',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
       ],
     });

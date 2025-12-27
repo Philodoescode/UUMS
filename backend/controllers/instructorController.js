@@ -1,4 +1,5 @@
 const { Instructor, User, Department, Role } = require('../models');
+const instructorAwardsEavService = require('../utils/instructorAwardsEavService');
 
 // @desc    Create a new instructor
 // @route   POST /api/instructors
@@ -13,12 +14,14 @@ const createInstructor = async (req, res) => {
 
     // Check user exists and is an advisor
     const user = await User.findByPk(userId, {
-      include: [{ model: Role, as: 'role' }],
+      include: [{ model: Role, as: 'roles' }],
     });
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
-    if (user.role.name !== 'instructor') {
+    
+    const hasInstructorRole = user.roles && user.roles.some(r => r.name === 'instructor');
+    if (!hasInstructorRole) {
       return res.status(400).json({ message: 'User must have instructor role to be an instructor' });
     }
 
@@ -166,10 +169,165 @@ const deleteInstructor = async (req, res) => {
   }
 };
 
+// ============================================================================
+// INSTRUCTOR AWARDS ENDPOINTS (EAV-based)
+// These endpoints use the new EAV tables for award storage with fallback
+// to legacy JSONB column during the 2-sprint transition period.
+// ============================================================================
+
+// @desc    Get all awards for an instructor
+// @route   GET /api/instructors/:id/awards
+const getInstructorAwards = async (req, res) => {
+  try {
+    const instructor = await Instructor.findByPk(req.params.id);
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    const awards = await instructorAwardsEavService.getInstructorAwards(req.params.id);
+    
+    // Include migration status in response
+    const isMigrated = await instructorAwardsEavService.isInstructorAwardsMigrated(req.params.id);
+    
+    res.json({
+      instructorId: req.params.id,
+      awards,
+      source: isMigrated ? 'eav' : 'legacy',
+      count: awards.length,
+    });
+  } catch (error) {
+    console.error('Error fetching instructor awards:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Add a new award to an instructor
+// @route   POST /api/instructors/:id/awards
+const addInstructorAward = async (req, res) => {
+  try {
+    const instructor = await Instructor.findByPk(req.params.id);
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    const { title, year, organization, description, category } = req.body;
+
+    // Validate required fields
+    if (!title) {
+      return res.status(400).json({ message: 'Award title is required' });
+    }
+
+    const award = await instructorAwardsEavService.addInstructorAward(req.params.id, {
+      title,
+      year,
+      organization,
+      description,
+      category,
+    });
+
+    res.status(201).json({
+      message: 'Award added successfully',
+      award,
+    });
+  } catch (error) {
+    console.error('Error adding instructor award:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Update an existing award
+// @route   PUT /api/instructors/:id/awards/:awardGroupId
+const updateInstructorAward = async (req, res) => {
+  try {
+    const instructor = await Instructor.findByPk(req.params.id);
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    const { title, year, organization, description, category } = req.body;
+    const { awardGroupId } = req.params;
+
+    const award = await instructorAwardsEavService.updateInstructorAward(
+      req.params.id,
+      awardGroupId,
+      { title, year, organization, description, category }
+    );
+
+    res.json({
+      message: 'Award updated successfully',
+      award,
+    });
+  } catch (error) {
+    console.error('Error updating instructor award:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Delete an award
+// @route   DELETE /api/instructors/:id/awards/:awardGroupId
+const deleteInstructorAward = async (req, res) => {
+  try {
+    const instructor = await Instructor.findByPk(req.params.id);
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    const { awardGroupId } = req.params;
+    const deleted = await instructorAwardsEavService.deleteInstructorAward(
+      req.params.id,
+      awardGroupId
+    );
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Award not found' });
+    }
+
+    res.json({ message: 'Award deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting instructor award:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get awards from legacy JSONB column (read-only fallback)
+// @route   GET /api/instructors/:id/awards/legacy
+// @deprecated This endpoint is for backward compatibility only
+const getInstructorAwardsLegacy = async (req, res) => {
+  try {
+    const instructor = await Instructor.findByPk(req.params.id);
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found' });
+    }
+
+    const awards = await instructorAwardsEavService.getAwardsFromLegacy(req.params.id);
+    
+    res.json({
+      instructorId: req.params.id,
+      awards,
+      source: 'legacy_jsonb',
+      count: awards.length,
+      deprecated: true,
+      message: 'This endpoint returns data from the deprecated JSONB column. Use GET /api/instructors/:id/awards instead.',
+    });
+  } catch (error) {
+    console.error('Error fetching legacy awards:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createInstructor,
   getAllInstructors,
   getInstructorById,
   updateInstructor,
   deleteInstructor,
+  // Awards EAV endpoints
+  getInstructorAwards,
+  addInstructorAward,
+  updateInstructorAward,
+  deleteInstructorAward,
+  getInstructorAwardsLegacy,
 };

@@ -62,7 +62,7 @@ interface Employee {
     fullName: string;
     email: string;
     isActive: boolean;
-    role: { name: string };
+    roles: { name: string }[];
     instructorProfile?: {
         title: string;
         department: {
@@ -472,8 +472,8 @@ const HREmployees = () => {
                                                             <div className="text-xs text-muted-foreground">{employee.email}</div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant={employee.role.name === 'instructor' ? "default" : "secondary"}>
-                                                                {employee.instructorProfile?.title || employee.role.name}
+                                                            <Badge variant={employee.roles?.some(r => r.name === 'instructor') ? "default" : "secondary"}>
+                                                                {employee.instructorProfile?.title || employee.roles?.map(r => r.name).join(', ')}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>{employee.instructorProfile?.department?.name || 'N/A'}</TableCell>
@@ -577,8 +577,8 @@ const HREmployees = () => {
                                                             <div className="text-xs text-muted-foreground">{employee.email}</div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant={employee.role.name === 'instructor' ? "default" : "secondary"}>
-                                                                {employee.instructorProfile?.title || employee.role.name}
+                                                            <Badge variant={employee.roles?.some(r => r.name === 'instructor') ? "default" : "secondary"}>
+                                                                {employee.instructorProfile?.title || employee.roles?.map(r => r.name).join(', ')}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell>

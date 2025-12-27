@@ -40,7 +40,8 @@ const sendMessage = async (req, res) => {
 
     // 4.5 Parent-Teacher Validation
     // If sender is a parent, recipient must be a teacher of one of their children
-    if (req.user.role && req.user.role.name.toLowerCase() === 'parent') {
+    const isParent = req.user.roles && req.user.roles.some(r => r.name.toLowerCase() === 'parent');
+    if (isParent) {
       const authorized = await User.count({
         where: { id: senderId },
         include: [{
@@ -92,13 +93,13 @@ const sendMessage = async (req, res) => {
           model: User,
           as: 'sender',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'recipient',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
       ],
     });
@@ -145,13 +146,13 @@ const getMessageHistory = async (req, res) => {
           model: User,
           as: 'sender',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
         {
           model: User,
           as: 'recipient',
           attributes: ['id', 'fullName', 'email'],
-          include: [{ model: Role, as: 'role', attributes: ['name'] }],
+          include: [{ model: Role, as: 'roles', attributes: ['name'] }],
         },
       ],
       order: [['createdAt', 'ASC']],

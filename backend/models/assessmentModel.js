@@ -92,6 +92,11 @@ const Assessment = sequelize.define('Assessment', {
     allowNull: true, // For now optional, but eventually required 
     comment: 'Array of questions with type, text, options, and correctAnswer',
   },
+  metadataEavEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Flag indicating if extended metadata is stored in EAV tables. Use assessmentMetadataEavService to access.',
+  },
 }, {
   tableName: 'assessments',
   timestamps: true,

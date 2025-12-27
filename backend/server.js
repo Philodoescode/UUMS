@@ -94,14 +94,54 @@ const startServer = async () => {
     // Connect to Database
     await connectDB();
 
-    // Sync models with database (creates tables if they don't exist)
-    await sequelize.sync({ alter: true });
-    console.log('Database synchronized.');
+    // ============================================================================
+    // Database Migration Strategy (Sequelize CLI)
+    // ============================================================================
+    // 
+    // ⚠️  IMPORTANT: This application uses Sequelize CLI migrations exclusively.
+    //    DO NOT use sequelize.sync() in production or development.
+    //
+    // Migration Commands:
+    //   pnpm migrate:up        - Apply all pending migrations
+    //   pnpm migrate:undo      - Rollback the last migration
+    //   pnpm migrate:undo:all  - Rollback all migrations
+    //   pnpm migrate:status    - Show migration status
+    //   pnpm migrate:create <name> - Create new migration file
+    //
+    // Before starting the server:
+    //   1. Ensure database exists and is accessible
+    //   2. Run: pnpm migrate:up
+    //   3. Run setup scripts for EAV tables if needed:
+    //      - node scripts/setup-user-profile-eav.js
+    //      - node scripts/setup-assessment-metadata-eav.js
+    //      - node scripts/migrate-facility-equipment-to-eav.js
+    //
+    // ============================================================================
+    
+    const NODE_ENV = process.env.NODE_ENV || 'development';
+    
+    console.log(`Starting server in ${NODE_ENV} mode...`);
+    console.log('Using Sequelize CLI migrations for database schema management.');
+    console.log('Run "pnpm migrate:status" to check pending migrations.');
+    
+    // Verify database schema (optional connection test)
+    try {
+      await sequelize.query('SELECT 1');
+      console.log('Database connection verified.');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError.message);
+      console.error('Ensure database is running and migrations have been applied.');
+      process.exit(1);
+    }
 
     // Run Seeder (Creates dummy accounts if missing)
     await seedDatabase();
 
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`\nServer running on http://localhost:${PORT}`);
+      console.log('API endpoints available at /api/*');
+      console.log('\n');
+    });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

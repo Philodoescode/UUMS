@@ -11,7 +11,7 @@ const getAllEmployees = async (req, res) => {
             include: [
                 {
                     model: Role,
-                    as: 'role',
+                    as: 'roles',
                     where: {
                         name: {
                             [Op.in]: ['instructor', 'ta']
@@ -108,7 +108,7 @@ const getEmployeeById = async (req, res) => {
             include: [
                 {
                     model: Role,
-                    as: 'role',
+                    as: 'roles',
                     attributes: ['id', 'name']
                 },
                 {
@@ -351,7 +351,7 @@ const getLeaveRequests = async (req, res) => {
                     include: [
                         {
                             model: Role,
-                            as: 'role',
+                            as: 'roles',
                             attributes: ['name']
                         }
                     ]
@@ -726,7 +726,7 @@ const getAllEmployeesWithBenefits = async (req, res) => {
             include: [
                 {
                     model: Role,
-                    as: 'role',
+                    as: 'roles',
                     where: {
                         name: {
                             [Op.in]: ['instructor', 'ta']

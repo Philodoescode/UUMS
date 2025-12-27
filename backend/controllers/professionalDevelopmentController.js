@@ -46,7 +46,8 @@ const getRecordsByUser = async (req, res) => {
         const { userId } = req.params;
 
         // Check permissions: HR or the user themselves
-        if (req.user.role.name !== 'hr' && req.user.role.name !== 'admin' && req.user.id !== userId) {
+        const hasPermission = req.user.roles && req.user.roles.some(r => r.name === 'hr' || r.name === 'admin');
+        if (!hasPermission && req.user.id !== userId) {
             return res.status(403).json({ message: 'Not authorized to view these records' });
         }
 

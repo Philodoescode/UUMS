@@ -30,7 +30,8 @@ const createFeedback = async (req, res) => {
         // Let's stick to 'enrolled' or 'completed'
         // Actually, checking standard logic, usually evaluation is during the term.
         // Let's allow ['enrolled', 'completed']
-        if (!enrollment && req.user.role.name !== 'admin') {
+        const isAdmin = req.user.roles && req.user.roles.some(r => r.name === 'admin');
+        if (!enrollment && !isAdmin) {
             // double check if status could be completed
             const completedEnrollment = await Enrollment.findOne({
                 where: {

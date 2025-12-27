@@ -1,4 +1,4 @@
-const { DirectMessage, User, Role } = require('../models');
+const { DirectMessage, User, Role, UserRole } = require('../models');
 
 /**
  * Send automated DirectMessage notification for a new meeting request
@@ -134,13 +134,18 @@ async function getOrCreateSystemUser() {
       });
     }
     
-    // Create system user
+    // Create system user without roleId (multi-role pattern)
     systemUser = await User.create({
       fullName: 'UUMS System',
       email: 'system@uums.edu',
       password: 'N/A', // System user doesn't need a real password
-      roleId: systemRole.id,
       isActive: true,
+    });
+
+    // Assign system role through UserRole join table
+    await UserRole.create({
+      userId: systemUser.id,
+      roleId: systemRole.id
     });
   }
   

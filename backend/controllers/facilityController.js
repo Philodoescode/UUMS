@@ -1,5 +1,6 @@
 const { Facility, Booking, Course, User } = require('../models');
 const { Op } = require('sequelize');
+const facilityEquipmentService = require('../utils/facilityEquipmentEavService');
 
 // @desc    Create a new facility
 // @route   POST /api/facilities
@@ -417,6 +418,116 @@ const createBooking = async (req, res) => {
   }
 };
 
+// @desc    Get equipment for a facility (uses EAV with legacy fallback)
+// @route   GET /api/facilities/:id/equipment
+const getFacilityEquipment = async (req, res) => {
+  try {
+    const facility = await Facility.findByPk(req.params.id);
+
+    if (!facility || !facility.isActive) {
+      return res.status(404).json({ message: 'Facility not found' });
+    }
+
+    const equipment = await facilityEquipmentService.getFacilityEquipment(facility.id);
+    const isMigrated = await facilityEquipmentService.isFacilityEquipmentMigrated(facility.id);
+
+    res.json({
+      facilityId: facility.id,
+      facilityName: facility.name,
+      equipment,
+      source: isMigrated ? 'eav' : 'legacy',
+    });
+  } catch (error) {
+    console.error('Error fetching facility equipment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Add equipment to a facility
+// @route   POST /api/facilities/:id/equipment
+const addFacilityEquipment = async (req, res) => {
+  try {
+    const facility = await Facility.findByPk(req.params.id);
+
+    if (!facility || !facility.isActive) {
+      return res.status(404).json({ message: 'Facility not found' });
+    }
+
+    const { name, quantity, condition, notes } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Equipment name is required' });
+    }
+
+    const equipment = await facilityEquipmentService.addFacilityEquipment(facility.id, {
+      name,
+      quantity: quantity || 1,
+      condition: condition || 'Good',
+      notes,
+    });
+
+    res.status(201).json(equipment);
+  } catch (error) {
+    console.error('Error adding facility equipment:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+};
+
+// @desc    Update equipment in a facility
+// @route   PUT /api/facilities/:id/equipment/:equipmentId
+const updateFacilityEquipment = async (req, res) => {
+  try {
+    const facility = await Facility.findByPk(req.params.id);
+
+    if (!facility || !facility.isActive) {
+      return res.status(404).json({ message: 'Facility not found' });
+    }
+
+    const { name, quantity, condition, notes } = req.body;
+    const equipmentId = req.params.equipmentId;
+
+    const equipment = await facilityEquipmentService.updateFacilityEquipment(
+      facility.id,
+      equipmentId,
+      { name, quantity, condition, notes }
+    );
+
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error updating facility equipment:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Delete equipment from a facility
+// @route   DELETE /api/facilities/:id/equipment/:equipmentId
+const deleteFacilityEquipment = async (req, res) => {
+  try {
+    const facility = await Facility.findByPk(req.params.id);
+
+    if (!facility || !facility.isActive) {
+      return res.status(404).json({ message: 'Facility not found' });
+    }
+
+    const deleted = await facilityEquipmentService.deleteFacilityEquipment(
+      facility.id,
+      req.params.equipmentId
+    );
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Equipment not found' });
+    }
+
+    res.json({ message: 'Equipment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting facility equipment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createFacility,
   getAllFacilities,
@@ -426,4 +537,9 @@ module.exports = {
   updateFacilityStatus,
   getFacilityBookings,
   createBooking,
+  // Equipment EAV operations
+  getFacilityEquipment,
+  addFacilityEquipment,
+  updateFacilityEquipment,
+  deleteFacilityEquipment,
 };

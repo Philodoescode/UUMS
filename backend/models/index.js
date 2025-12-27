@@ -39,6 +39,18 @@ const StudentFeedback = require('./studentFeedbackModel');
 const ProfessionalDevelopment = require('./professionalDevelopmentModel');
 const ResearchPublication = require('./researchPublicationModel');
 
+// ===== EAV (Entity-Attribute-Value) Models =====
+const EntityType = require('./entityTypeModel');
+const AttributeDefinition = require('./attributeDefinitionModel');
+// NOTE: Generic AttributeValue model removed - use entity-specific models below
+
+// ===== Entity-Specific EAV Models =====
+const UserAttributeValue = require('./userAttributeValueModel');
+const RoleAttributeValue = require('./roleAttributeValueModel');
+const AssessmentAttributeValue = require('./assessmentAttributeValueModel');
+const FacilityAttributeValue = require('./facilityAttributeValueModel');
+const InstructorAttributeValue = require('./instructorAttributeValueModel');
+
 // ===== Parent & Student Associations =====
 User.belongsToMany(User, {
   through: ParentStudent,
@@ -55,10 +67,11 @@ User.belongsToMany(User, {
 
 
 // ===== User & Role Associations =====
-User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
-Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+// Multi-role architecture: Users can have multiple roles through UserRole join table
+// NOTE: The direct User.belongsTo(Role) and Role.hasMany(User) via roleId have been removed
+// All role assignments now go through the many-to-many relationship
 
-// Many-to-many relationship for multiple roles
+// Many-to-many relationship for multiple roles (PRIMARY relationship)
 User.belongsToMany(Role, {
   through: UserRole,
   foreignKey: 'userId',
@@ -69,8 +82,14 @@ Role.belongsToMany(User, {
   through: UserRole,
   foreignKey: 'roleId',
   otherKey: 'userId',
-  as: 'usersWithRole'
+  as: 'users'
 });
+
+// Direct access to UserRole for querying
+User.hasMany(UserRole, { foreignKey: 'userId', as: 'userRoles' });
+UserRole.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Role.hasMany(UserRole, { foreignKey: 'roleId', as: 'roleUsers' });
+UserRole.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
 
 User.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 User.hasMany(User, { foreignKey: 'createdById', as: 'createdUsers' });
@@ -298,6 +317,56 @@ ProfessionalDevelopment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(ResearchPublication, { foreignKey: 'userId', as: 'researchPublications' });
 ResearchPublication.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Generic EAV associations removed - using entity-specific tables with FK CASCADE
+
+// ===== Entity-Specific EAV Associations =====
+// User attribute values (entity-specific table with proper FK)
+User.hasMany(UserAttributeValue, { foreignKey: 'userId', as: 'attributeValues' });
+UserAttributeValue.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+AttributeDefinition.hasMany(UserAttributeValue, { foreignKey: 'attributeId', as: 'userValues' });
+UserAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
+// Role attribute values (entity-specific table with proper FK)
+Role.hasMany(RoleAttributeValue, { foreignKey: 'roleId', as: 'attributeValues' });
+RoleAttributeValue.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
+
+AttributeDefinition.hasMany(RoleAttributeValue, { foreignKey: 'attributeId', as: 'roleValues' });
+RoleAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attributeDefinition' });
+
+// Assessment attribute values (entity-specific table with proper FK)
+Assessment.hasMany(AssessmentAttributeValue, { foreignKey: 'assessmentId', as: 'attributeValues' });
+AssessmentAttributeValue.belongsTo(Assessment, { foreignKey: 'assessmentId', as: 'assessment' });
+
+AttributeDefinition.hasMany(AssessmentAttributeValue, { foreignKey: 'attributeId', as: 'assessmentValues' });
+AssessmentAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
+// Facility attribute values (entity-specific table with proper FK)
+Facility.hasMany(FacilityAttributeValue, { foreignKey: 'facilityId', as: 'attributeValues' });
+FacilityAttributeValue.belongsTo(Facility, { foreignKey: 'facilityId', as: 'facility' });
+
+AttributeDefinition.hasMany(FacilityAttributeValue, { foreignKey: 'attributeId', as: 'facilityValues' });
+FacilityAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
+// Instructor attribute values (entity-specific table with proper FK)
+Instructor.hasMany(InstructorAttributeValue, { foreignKey: 'instructorId', as: 'attributeValues' });
+InstructorAttributeValue.belongsTo(Instructor, { foreignKey: 'instructorId', as: 'instructor' });
+
+AttributeDefinition.hasMany(InstructorAttributeValue, { foreignKey: 'attributeId', as: 'instructorValues' });
+InstructorAttributeValue.belongsTo(AttributeDefinition, { foreignKey: 'attributeId', as: 'attribute' });
+
+// NOTE: EAV cascade delete hooks removed - entity-specific tables use DB-level FK CASCADE
+// The beforeDestroy hooks are no longer needed since:
+// - user_attribute_values has FK to users(id) ON DELETE CASCADE
+// - role_attribute_values has FK to roles(id) ON DELETE CASCADE
+// - assessment_attribute_values has FK to assessments(id) ON DELETE CASCADE
+// - facility_attribute_values has FK to facilities(id) ON DELETE CASCADE  
+// - instructor_attribute_values has FK to instructors(id) ON DELETE CASCADE
+
+// Keep entity type associations
+EntityType.hasMany(AttributeDefinition, { foreignKey: 'entityTypeId', as: 'attributes' });
+AttributeDefinition.belongsTo(EntityType, { foreignKey: 'entityTypeId', as: 'entityType' });
+
 module.exports = {
   sequelize,
   User,
@@ -338,4 +407,12 @@ module.exports = {
   StudentFeedback,
   ProfessionalDevelopment,
   ResearchPublication,
+  EntityType,
+  AttributeDefinition,
+  // Entity-Specific EAV Models (generic AttributeValue removed)
+  UserAttributeValue,
+  RoleAttributeValue,
+  AssessmentAttributeValue,
+  FacilityAttributeValue,
+  InstructorAttributeValue,
 };

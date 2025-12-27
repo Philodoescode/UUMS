@@ -23,7 +23,7 @@ const getChildren = async (req, res) => {
                     model: User,
                     as: 'children',
                     attributes: ['id', 'fullName', 'email'],
-                    include: [{ model: Role, as: 'role' }]
+                    include: [{ model: Role, as: 'roles' }]
                 }
             ]
         });

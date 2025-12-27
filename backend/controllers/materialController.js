@@ -7,7 +7,8 @@ const uploadMaterial = async (req, res) => {
     try {
         const { courseId, title, description, fileUrl, groupId } = req.body;
 
-        if (req.user.role.name !== 'instructor' && req.user.role.name !== 'admin') {
+        const isInstructorOrAdmin = req.user.roles && req.user.roles.some(r => r.name === 'instructor' || r.name === 'admin');
+        if (!isInstructorOrAdmin) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -62,7 +63,8 @@ const getMaterialsByCourse = async (req, res) => {
         const whereClause = { courseId };
 
         // Students only see latest
-        if (req.user.role.name === 'student' || includeHistory !== 'true') {
+        const isStudent = req.user.roles && req.user.roles.some(r => r.name === 'student');
+        if (isStudent || includeHistory !== 'true') {
             whereClause.isLatest = true;
         }
 
